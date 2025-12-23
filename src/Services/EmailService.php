@@ -30,7 +30,7 @@ class EmailService
 
         $notAttending = array_filter($allMembers, fn($m) => !in_array($m['id'], $assignedIds));
 
-        $subject = "Callout Attendance - {$callout['icad_number']} - {$brigade['name']}";
+        $subject = "{$callout['icad_number']} - Callout Attendance - {$brigade['name']}";
 
         $body = $this->buildEmailBody($brigade, $callout, $attendance, $notAttending);
 
