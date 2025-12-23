@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigade-attendance-v2';
+const CACHE_NAME = 'brigade-attendance-v3';
 // Note: Static assets are cached dynamically on first request
 // to support deployment in any subdirectory
 const CACHEABLE_EXTENSIONS = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2'];
@@ -53,25 +53,24 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Static assets - cache first (only cacheable file types)
+    // Static assets - network first, fallback to cache (only cacheable file types)
     if (event.request.method === 'GET') {
         const isCacheable = CACHEABLE_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
 
         if (isCacheable) {
             event.respondWith(
-                caches.match(event.request).then(cached => {
-                    const fetched = fetch(event.request).then(response => {
-                        // Cache successful responses
-                        if (response.ok) {
-                            const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, clone);
-                            });
-                        }
-                        return response;
-                    });
-
-                    return cached || fetched;
+                fetch(event.request).then(response => {
+                    // Cache successful responses
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => {
+                            cache.put(event.request, clone);
+                        });
+                    }
+                    return response;
+                }).catch(() => {
+                    // Network failed, try cache
+                    return caches.match(event.request);
                 })
             );
         }
