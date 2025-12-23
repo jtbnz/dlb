@@ -441,6 +441,12 @@
             slot.style.pointerEvents = 'none'; // Prevent clicks during save
         }
 
+        // Temporarily close SSE to prevent blocking (PHP single-threaded issue)
+        if (state.eventSource) {
+            state.eventSource.close();
+            state.eventSource = null;
+        }
+
         try {
             const response = await fetch(`/${SLUG}/api/attendance`, {
                 method: 'POST',
@@ -475,12 +481,45 @@
             await loadData();
         } finally {
             state.isProcessing = false;
+            // Reconnect SSE after request completes
+            if (state.callout && state.callout.status === 'active') {
+                connectSSE();
+            }
         }
     }
 
     window.removeAttendance = async function(attendanceId) {
         if (state.isProcessing) return;
         state.isProcessing = true;
+
+        // Find the member being removed for optimistic update
+        let removedMember = null;
+        if (state.callout.attendance) {
+            for (const truck of state.callout.attendance) {
+                if (truck.positions) {
+                    for (const pos of Object.values(truck.positions)) {
+                        if (pos.members) {
+                            const found = pos.members.find(m => m.id === attendanceId);
+                            if (found) {
+                                removedMember = found;
+                                // Optimistic removal from attendance
+                                pos.members = pos.members.filter(m => m.id !== attendanceId);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Optimistic UI update - render immediately
+        render();
+
+        // Temporarily close SSE to prevent blocking (PHP single-threaded issue)
+        if (state.eventSource) {
+            state.eventSource.close();
+            state.eventSource = null;
+        }
 
         try {
             const response = await fetch(`/${SLUG}/api/attendance/${attendanceId}`, {
@@ -491,6 +530,8 @@
 
             if (data.error) {
                 alert(data.error);
+                // Reload on error to restore state
+                await loadData();
                 return;
             }
 
@@ -500,8 +541,14 @@
         } catch (error) {
             console.error('Failed to remove attendance:', error);
             alert('Failed to remove. Please try again.');
+            // Reload on error
+            await loadData();
         } finally {
             state.isProcessing = false;
+            // Reconnect SSE after request completes
+            if (state.callout && state.callout.status === 'active') {
+                connectSSE();
+            }
         }
     };
 

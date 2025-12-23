@@ -153,6 +153,7 @@ class AttendanceController
     public function addAttendance(string $slug): void
     {
         $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
 
         $data = json_decode(file_get_contents('php://input'), true);
 
@@ -205,7 +206,7 @@ class AttendanceController
                 json_response([
                     'error' => 'Position already assigned to another member',
                     'attendance' => Attendance::findByCalloutGrouped($calloutId),
-                    'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id']),
+                    'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder),
                 ], 409);
                 return;
             }
@@ -233,14 +234,14 @@ class AttendanceController
                 'success' => true,
                 'attendance_id' => $attendanceId,
                 'attendance' => Attendance::findByCalloutGrouped($calloutId),
-                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id']),
+                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder),
             ]);
         } catch (\Exception $e) {
             // Handle database constraint errors gracefully
             json_response([
                 'error' => 'Failed to save. Please try again.',
                 'attendance' => Attendance::findByCalloutGrouped($calloutId),
-                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id']),
+                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder),
             ], 409);
         }
     }
@@ -248,6 +249,7 @@ class AttendanceController
     public function removeAttendance(string $slug, string $attendanceId): void
     {
         $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
 
         $attendance = Attendance::findById((int)$attendanceId);
         if (!$attendance) {
@@ -281,7 +283,7 @@ class AttendanceController
         json_response([
             'success' => true,
             'attendance' => Attendance::findByCalloutGrouped($callout['id']),
-            'available_members' => Attendance::getAvailableMembers($callout['id'], $brigade['id']),
+            'available_members' => Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder),
         ]);
     }
 

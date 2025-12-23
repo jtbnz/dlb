@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\Brigade;
 use App\Models\Callout;
 use App\Models\Attendance;
 use App\Middleware\PinAuth;
@@ -11,6 +12,7 @@ class SSEController
     public function stream(string $slug, string $calloutId): void
     {
         $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
 
         $callout = Callout::findById((int)$calloutId);
         if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
@@ -53,7 +55,7 @@ class SSEController
 
                     // Send updated attendance data
                     $attendance = Attendance::findByCalloutGrouped((int)$calloutId);
-                    $availableMembers = Attendance::getAvailableMembers((int)$calloutId, $brigade['id']);
+                    $availableMembers = Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder);
 
                     echo "event: update\n";
                     echo "data: " . json_encode([
@@ -65,11 +67,14 @@ class SSEController
                 }
             }
 
-            // Check if callout was submitted
-            $currentCallout = Callout::findById((int)$calloutId);
-            if ($currentCallout && $currentCallout['status'] !== 'active') {
+            // Check if callout was submitted - use a simple status query to avoid overhead
+            $currentStatus = db()->queryOne(
+                "SELECT status FROM callouts WHERE id = ?",
+                [(int)$calloutId]
+            );
+            if ($currentStatus && $currentStatus['status'] !== 'active') {
                 echo "event: submitted\n";
-                echo "data: " . json_encode(['status' => $currentCallout['status']]) . "\n\n";
+                echo "data: " . json_encode(['status' => $currentStatus['status']]) . "\n\n";
                 flush();
                 // Don't reconnect after submission - just end the stream
                 return;
