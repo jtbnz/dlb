@@ -1,19 +1,10 @@
-const CACHE_NAME = 'brigade-attendance-v1';
-const STATIC_ASSETS = [
-    '/',
-    '/assets/css/app.css',
-    '/assets/js/attendance.js',
-    '/assets/js/admin.js',
-    '/manifest.json'
-];
+const CACHE_NAME = 'brigade-attendance-v2';
+// Note: Static assets are cached dynamically on first request
+// to support deployment in any subdirectory
+const CACHEABLE_EXTENSIONS = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2'];
 
-// Install - cache static assets
+// Install - skip waiting to activate immediately
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(STATIC_ASSETS);
-        })
-    );
     self.skipWaiting();
 });
 
@@ -62,24 +53,28 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Static assets - cache first
+    // Static assets - cache first (only cacheable file types)
     if (event.request.method === 'GET') {
-        event.respondWith(
-            caches.match(event.request).then(cached => {
-                const fetched = fetch(event.request).then(response => {
-                    // Cache successful responses
-                    if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => {
-                            cache.put(event.request, clone);
-                        });
-                    }
-                    return response;
-                });
+        const isCacheable = CACHEABLE_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
 
-                return cached || fetched;
-            })
-        );
+        if (isCacheable) {
+            event.respondWith(
+                caches.match(event.request).then(cached => {
+                    const fetched = fetch(event.request).then(response => {
+                        // Cache successful responses
+                        if (response.ok) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, clone);
+                            });
+                        }
+                        return response;
+                    });
+
+                    return cached || fetched;
+                })
+            );
+        }
     }
 });
 

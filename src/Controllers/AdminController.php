@@ -656,8 +656,8 @@ class AdminController
 
         $url = config('app.url') . '/' . $slug;
 
-        // Generate QR code using Google Charts API (simple approach)
-        $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=' . urlencode($url);
+        // Generate QR code using QR Server API (free, no API key needed)
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($url);
 
         json_response([
             'url' => $url,
@@ -739,11 +739,11 @@ class AdminController
 
         $url = config('app.url') . '/' . $slug;
 
-        // Generate QR code using Google Charts API
-        $qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=400x400&chl=' . urlencode($url) . '&choe=UTF-8';
+        // Generate QR code using QR Server API
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=' . urlencode($url);
 
         // Fetch the image
-        $imageData = file_get_contents($qrUrl);
+        $imageData = @file_get_contents($qrUrl);
 
         if ($imageData === false) {
             json_response(['error' => 'Failed to generate QR code'], 500);
