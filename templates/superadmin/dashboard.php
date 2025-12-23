@@ -289,7 +289,7 @@ async function deleteBrigade() {
     const brigadeId = document.getElementById('edit-id').value;
     const brigade = brigades.find(b => b.id == brigadeId);
 
-    if (!confirm(`Are you sure you want to delete "${brigade.name}"? This will permanently delete all members, trucks, callouts, and attendance records. This action cannot be undone.`)) {
+    if (!confirm('Are you sure you want to delete "' + brigade.name + '"? This will permanently delete all members, trucks, callouts, and attendance records. This action cannot be undone.')) {
         return;
     }
 
