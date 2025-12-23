@@ -49,6 +49,16 @@ $routes = [
     // Public routes
     ['GET', '/', 'HomeController@index'],
 
+    // Super Admin routes (must come before brigade routes)
+    ['GET', '/admin', 'SuperAdminController@showLogin'],
+    ['POST', '/admin/login', 'SuperAdminController@login'],
+    ['GET', '/admin/logout', 'SuperAdminController@logout'],
+    ['GET', '/admin/dashboard', 'SuperAdminController@dashboard'],
+    ['GET', '/admin/api/brigades', 'SuperAdminController@apiGetBrigades'],
+    ['POST', '/admin/api/brigades', 'SuperAdminController@apiCreateBrigade'],
+    ['PUT', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiUpdateBrigade'],
+    ['DELETE', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiDeleteBrigade'],
+
     // Brigade PIN entry and auth
     ['GET', '/([a-z0-9-]+)', 'AuthController@showPin'],
     ['POST', '/([a-z0-9-]+)/auth', 'AuthController@verifyPin'],

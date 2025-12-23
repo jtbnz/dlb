@@ -14,6 +14,7 @@ class Member
         'QFF' => 6,
         'FF' => 7,
         'RCFF' => 8,
+        'OS' => 9,
     ];
 
     public static function findById(int $id): ?array
@@ -120,6 +121,8 @@ class Member
             'Probationary Firefighter' => 7,
             'Recruit Firefighter' => 8,
             'RCFF' => 8,
+            'Operational Support' => 9,
+            'OS' => 9,
         ];
 
         foreach ($fullNames as $name => $order) {
@@ -175,6 +178,7 @@ class Member
 
             $name = trim($parts[0]);
             $rank = isset($parts[1]) ? trim($parts[1]) : '';
+            $joinDate = isset($parts[2]) ? self::parseDate(trim($parts[2])) : null;
 
             // Check if member exists
             $existing = db()->queryOne(
@@ -184,18 +188,26 @@ class Member
 
             if ($existing) {
                 if ($updateExisting) {
-                    self::update($existing['id'], ['rank' => $rank, 'is_active' => 1]);
+                    $updateData = ['rank' => $rank, 'is_active' => 1];
+                    if ($joinDate !== null) {
+                        $updateData['join_date'] = $joinDate;
+                    }
+                    self::update($existing['id'], $updateData);
                     $updated++;
                 } else {
                     $skipped++;
                 }
             } else {
-                self::create([
+                $memberData = [
                     'brigade_id' => $brigadeId,
                     'name' => $name,
                     'rank' => $rank,
                     'is_active' => 1,
-                ]);
+                ];
+                if ($joinDate !== null) {
+                    $memberData['join_date'] = $joinDate;
+                }
+                self::create($memberData);
                 $imported++;
             }
         }
@@ -206,5 +218,42 @@ class Member
             'skipped' => $skipped,
             'errors' => $errors,
         ];
+    }
+
+    /**
+     * Parse various date formats into Y-m-d
+     */
+    private static function parseDate(string $dateStr): ?string
+    {
+        if (empty($dateStr)) {
+            return null;
+        }
+
+        // Try common formats
+        $formats = [
+            'Y-m-d',      // 2020-01-15
+            'd/m/Y',      // 15/01/2020
+            'd-m-Y',      // 15-01-2020
+            'm/d/Y',      // 01/15/2020
+            'd M Y',      // 15 Jan 2020
+            'd F Y',      // 15 January 2020
+            'j/n/Y',      // 5/1/2020
+            'j-n-Y',      // 5-1-2020
+        ];
+
+        foreach ($formats as $format) {
+            $date = \DateTime::createFromFormat($format, $dateStr);
+            if ($date !== false) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        // Try strtotime as fallback
+        $timestamp = strtotime($dateStr);
+        if ($timestamp !== false) {
+            return date('Y-m-d', $timestamp);
+        }
+
+        return null;
     }
 }

@@ -29,6 +29,10 @@ return [
         'rate_limit_attempts' => 5,
         'rate_limit_window' => 900,  // 15 minutes
     ],
+    'super_admin' => [
+        'username' => 'superadmin',           // Change this!
+        'password' => 'changeme123',          // Change this immediately!
+    ],
     'email' => [
         'driver' => 'mail',  // smtp, sendmail, mail
         'host' => 'smtp.example.com',
