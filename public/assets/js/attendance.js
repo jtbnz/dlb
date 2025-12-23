@@ -39,7 +39,8 @@
     // Load initial data
     async function loadData() {
         try {
-            const response = await fetch(`${BASE}/${SLUG}/api/callout/active`);
+            // Add cache-busting parameter to prevent stale data after submission
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/active?_=${Date.now()}`);
             const data = await response.json();
 
             state.trucks = data.trucks || [];
@@ -170,8 +171,10 @@
 
             closeSubmitModal();
             alert('Attendance submitted successfully!');
-            // Redirect back to ICAD entry page
-            window.location.href = `${BASE}/${SLUG}/attendance`;
+            // Reset state and redirect back to ICAD entry page
+            state.callout = null;
+            state.availableMembers = [];
+            window.location.replace(`${BASE}/${SLUG}/attendance`);
         } catch (error) {
             console.error('Failed to submit:', error);
             alert('Failed to submit attendance. Please try again.');
