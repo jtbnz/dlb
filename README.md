@@ -47,7 +47,8 @@ Members can be sorted by:
 ```
 dlb/
 ├── config/
-│   └── config.php          # Application configuration
+│   ├── config.sample.php   # Sample configuration (copy to config.php)
+│   └── config.php          # Your local configuration (git-ignored)
 ├── data/
 │   └── database.sqlite     # SQLite database (auto-created)
 ├── public/
@@ -80,16 +81,26 @@ scp -r ./* user@server:/var/www/html/dlb/
 
 ### 2. Configure Application
 
-Edit `config/config.php`:
+Copy the sample config and edit for your environment:
+
+```bash
+cd /var/www/html/dlb/config
+cp config.sample.php config.php
+nano config.php
+```
+
+Update these values in `config.php`:
 
 ```php
 'app' => [
     'name' => 'Brigade Attendance',
-    'url' => 'https://kiaora.tech/dlb',      // Your full URL
+    'url' => 'https://example.com/dlb',      // Your full URL
     'base_path' => '/dlb',                    // Subdirectory path (no trailing slash)
     'debug' => false,                         // Set to false in production
 ],
 ```
+
+**Note:** `config.php` is git-ignored, so your settings won't be overwritten when pulling updates.
 
 ### 3. Configure Apache (.htaccess)
 
@@ -155,9 +166,9 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 ### 7. First Access
 
-1. Navigate to `https://kiaora.tech/dlb/`
+1. Navigate to your URL (e.g., `https://example.com/dlb/`)
 2. A demo brigade is auto-created on first run
-3. Access admin at `https://kiaora.tech/dlb/demo-brigade/admin`
+3. Access admin at `/demo-brigade/admin`
 4. Default credentials: `admin` / `admin123`
 5. **Change the password immediately!**
 

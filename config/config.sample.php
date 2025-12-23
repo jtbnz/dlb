@@ -1,11 +1,22 @@
 <?php
 
+/**
+ * Configuration Sample File
+ *
+ * Copy this file to config.php and update the values for your environment.
+ * The config.php file is ignored by git to protect your settings.
+ *
+ * On your server:
+ *   cp config.sample.php config.php
+ *   # Then edit config.php with your production values
+ */
+
 return [
     'app' => [
         'name' => 'Brigade Attendance',
-        'url' => 'http://localhost:8080',
-        'base_path' => '',  // Set to '/subdirectory' if deployed in a subdirectory (no trailing slash)
-        'debug' => true,
+        'url' => 'https://example.com/dlb',     // Your full URL
+        'base_path' => '/dlb',                   // Subdirectory path (no trailing slash), or '' for root
+        'debug' => false,                        // Set to false in production
     ],
     'database' => [
         'path' => __DIR__ . '/../data/database.sqlite',

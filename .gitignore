@@ -1,3 +1,6 @@
+# Configuration (use config.sample.php as template)
+config/config.php
+
 # Database
 data/*.sqlite
 data/sse_*.json
