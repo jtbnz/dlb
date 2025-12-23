@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#dc2626"/>
+  <g fill="white">
+    <!-- Fire/flame icon representing fire brigade -->
+    <path d="M256 64c-16 32-48 64-48 112 0 48 32 80 48 80s48-32 48-80c0-48-32-80-48-112z"/>
+    <path d="M256 176c-24 48-72 96-72 160 0 80 48 112 72 112s72-32 72-112c0-64-48-112-72-160z"/>
+    <!-- Clipboard/checklist representing attendance -->
+    <rect x="336" y="256" width="112" height="160" rx="8" fill="rgba(255,255,255,0.3)"/>
+    <rect x="352" y="288" width="80" height="8" rx="4" fill="white"/>
+    <rect x="352" y="312" width="60" height="8" rx="4" fill="white"/>
+    <rect x="352" y="336" width="70" height="8" rx="4" fill="white"/>
+    <rect x="352" y="360" width="50" height="8" rx="4" fill="white"/>
+    <rect x="352" y="384" width="65" height="8" rx="4" fill="white"/>
+  </g>
+</svg>

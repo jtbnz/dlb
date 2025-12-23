@@ -1,0 +1,30 @@
+{
+    "name": "Brigade Attendance",
+    "short_name": "Attendance",
+    "description": "Fire Brigade Callout Attendance System",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f9fafb",
+    "theme_color": "#dc2626",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/assets/images/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/images/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
