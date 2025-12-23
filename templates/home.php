@@ -8,7 +8,7 @@ $content = <<<HTML
 HTML;
 
 foreach ($brigades as $brigade) {
-    $content .= '<a href="/' . sanitize($brigade['slug']) . '" class="brigade-card">';
+    $content .= '<a href="' . base_path() . '/' . sanitize($brigade['slug']) . '" class="brigade-card">';
     $content .= '<h2>' . sanitize($brigade['name']) . '</h2>';
     $content .= '</a>';
 }

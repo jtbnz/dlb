@@ -79,7 +79,7 @@ ob_start();
         <div id="qr-container">
             <img id="qr-image" src="" alt="QR Code">
             <p id="qr-url"></p>
-            <a href="/<?= $slug ?>/admin/api/qrcode/download" class="btn" style="margin-top: 1rem;">Download QR Code</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/admin/api/qrcode/download" class="btn" style="margin-top: 1rem;">Download QR Code</a>
         </div>
     </div>
 
@@ -87,7 +87,7 @@ ob_start();
         <h2>Backup & Restore</h2>
         <p>Download a backup of the entire database or restore from a previous backup.</p>
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-            <a href="/<?= $slug ?>/admin/api/backup" class="btn">Download Backup</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/admin/api/backup" class="btn">Download Backup</a>
             <button type="button" class="btn" onclick="document.getElementById('restore-file').click()">Restore from Backup</button>
             <input type="file" id="restore-file" accept=".sqlite,.db" style="display: none;" onchange="restoreBackup(this)">
         </div>
@@ -99,10 +99,11 @@ ob_start();
 
 <script>
 const SLUG = '<?= $slug ?>';
+const BASE = window.BASE_PATH || '';
 let emailRecipients = [];
 
 async function loadSettings() {
-    const response = await fetch(`/${SLUG}/admin/api/settings`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings`);
     const data = await response.json();
 
     document.getElementById('brigade-name').value = data.name;
@@ -151,7 +152,7 @@ async function removeEmail(index) {
 }
 
 async function saveEmailSettings() {
-    await fetch(`/${SLUG}/admin/api/settings`, {
+    await fetch(`${BASE}/${SLUG}/admin/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,7 +165,7 @@ async function saveEmailSettings() {
 document.getElementById('general-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const response = await fetch(`/${SLUG}/admin/api/settings`, {
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: document.getElementById('brigade-name').value })
@@ -178,7 +179,7 @@ document.getElementById('general-form').addEventListener('submit', async functio
 document.getElementById('member-order-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const response = await fetch(`/${SLUG}/admin/api/settings`, {
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ member_order: document.getElementById('member-order').value })
@@ -192,7 +193,7 @@ document.getElementById('member-order-form').addEventListener('submit', async fu
 document.getElementById('pin-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const response = await fetch(`/${SLUG}/admin/api/settings/pin`, {
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings/pin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin: document.getElementById('new-pin').value })
@@ -210,7 +211,7 @@ document.getElementById('pin-form').addEventListener('submit', async function(e)
 document.getElementById('password-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const response = await fetch(`/${SLUG}/admin/api/settings/password`, {
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,7 +231,7 @@ document.getElementById('password-form').addEventListener('submit', async functi
 });
 
 async function loadQRCode() {
-    const response = await fetch(`/${SLUG}/admin/api/qrcode`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/qrcode`);
     const data = await response.json();
 
     document.getElementById('qr-image').src = data.qr_image;
@@ -257,7 +258,7 @@ async function restoreBackup(input) {
     formData.append('backup', file);
 
     try {
-        const response = await fetch(`/${SLUG}/admin/api/restore`, {
+        const response = await fetch(`${BASE}/${SLUG}/admin/api/restore`, {
             method: 'POST',
             body: formData
         });

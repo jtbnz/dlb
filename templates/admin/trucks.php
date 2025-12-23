@@ -72,10 +72,11 @@ ob_start();
 
 <script>
 const SLUG = '<?= $slug ?>';
+const BASE = window.BASE_PATH || '';
 let trucks = [];
 
 async function loadTrucks() {
-    const response = await fetch(`/${SLUG}/admin/api/trucks`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/trucks`);
     const data = await response.json();
     trucks = data.trucks;
     renderTrucks();
@@ -172,7 +173,7 @@ async function saveOrder() {
     const cards = container.querySelectorAll('.truck-card');
     const order = [...cards].map(card => parseInt(card.dataset.id));
 
-    await fetch(`/${SLUG}/admin/api/trucks/reorder`, {
+    await fetch(`${BASE}/${SLUG}/admin/api/trucks/reorder`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order })
@@ -218,7 +219,7 @@ document.getElementById('truck-form').addEventListener('submit', async function(
     const isStation = document.getElementById('truck-is-station').checked;
     const template = document.getElementById('truck-template').value;
 
-    const url = id ? `/${SLUG}/admin/api/trucks/${id}` : `/${SLUG}/admin/api/trucks`;
+    const url = id ? `${BASE}/${SLUG}/admin/api/trucks/${id}` : `${BASE}/${SLUG}/admin/api/trucks`;
     const method = id ? 'PUT' : 'POST';
 
     await fetch(url, {
@@ -234,7 +235,7 @@ document.getElementById('truck-form').addEventListener('submit', async function(
 async function deleteTruck(id) {
     if (!confirm('Delete this truck and all its positions?')) return;
 
-    await fetch(`/${SLUG}/admin/api/trucks/${id}`, { method: 'DELETE' });
+    await fetch(`${BASE}/${SLUG}/admin/api/trucks/${id}`, { method: 'DELETE' });
     loadTrucks();
 }
 
@@ -256,7 +257,7 @@ document.getElementById('position-form').addEventListener('submit', async functi
     const name = document.getElementById('position-name').value;
     const allowMultiple = document.getElementById('position-allow-multiple').checked;
 
-    await fetch(`/${SLUG}/admin/api/trucks/${truckId}/positions`, {
+    await fetch(`${BASE}/${SLUG}/admin/api/trucks/${truckId}/positions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, allow_multiple: allowMultiple ? 1 : 0 })
@@ -269,7 +270,7 @@ document.getElementById('position-form').addEventListener('submit', async functi
 async function deletePosition(id) {
     if (!confirm('Delete this position?')) return;
 
-    await fetch(`/${SLUG}/admin/api/positions/${id}`, { method: 'DELETE' });
+    await fetch(`${BASE}/${SLUG}/admin/api/positions/${id}`, { method: 'DELETE' });
     loadTrucks();
 }
 

@@ -3,8 +3,9 @@
 return [
     'app' => [
         'name' => 'Brigade Attendance',
-        'url' => 'http://localhost:8080',
-        'debug' => true,
+        'url' => 'https://kiaora.tech/dlb',
+        'base_path' => '/dlb',  // Set to '/subdirectory' if deployed in a subdirectory (no trailing slash)
+        'debug' => false,
     ],
     'database' => [
         'path' => __DIR__ . '/../data/database.sqlite',

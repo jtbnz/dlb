@@ -35,6 +35,13 @@ $requestMethod = $_SERVER['REQUEST_METHOD'];
 
 // Remove query string
 $path = parse_url($requestUri, PHP_URL_PATH);
+
+// Strip base path for subdirectory deployment
+$basePath = config('app.base_path', '');
+if ($basePath && strpos($path, $basePath) === 0) {
+    $path = substr($path, strlen($basePath));
+}
+
 $path = rtrim($path, '/') ?: '/';
 
 // Route matching

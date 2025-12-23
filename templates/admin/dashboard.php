@@ -48,10 +48,10 @@ ob_start();
     <div class="dashboard-section">
         <h2>Quick Actions</h2>
         <div class="quick-actions">
-            <a href="/<?= $slug ?>/attendance" class="btn btn-primary" target="_blank">Open Attendance Page</a>
-            <a href="/<?= $slug ?>/admin/members" class="btn">Manage Members</a>
-            <a href="/<?= $slug ?>/admin/trucks" class="btn">Configure Trucks</a>
-            <a href="/<?= $slug ?>/admin/settings" class="btn">Brigade Settings</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/attendance" class="btn btn-primary" target="_blank">Open Attendance Page</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/admin/members" class="btn">Manage Members</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/admin/trucks" class="btn">Configure Trucks</a>
+            <a href="<?= base_path() ?>/<?= $slug ?>/admin/settings" class="btn">Brigade Settings</a>
         </div>
     </div>
 </div>

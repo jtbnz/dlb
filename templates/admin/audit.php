@@ -27,11 +27,12 @@ ob_start();
 
 <script>
 const SLUG = '<?= $slug ?>';
+const BASE = window.BASE_PATH || '';
 let offset = 0;
 const limit = 50;
 
 async function loadLogs(append = false) {
-    const response = await fetch(`/${SLUG}/admin/api/audit?limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/audit?limit=${limit}&offset=${offset}`);
     const data = await response.json();
 
     const tbody = document.getElementById('audit-tbody');

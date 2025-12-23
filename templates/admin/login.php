@@ -18,7 +18,7 @@ $content = <<<HTML
     </form>
 
     <div class="login-back">
-        <a href="/{$slug}">Back to Attendance</a>
+        <a href="' . base_path() . '/{$slug}">Back to Attendance</a>
     </div>
 </div>
 
@@ -31,7 +31,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
     const errorEl = document.getElementById('login-error');
 
     try {
-        const response = await fetch('/{$slug}/admin/login', {
+        const response = await fetch(window.BASE_PATH + '/{$slug}/admin/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })

@@ -84,7 +84,7 @@ $content = <<<HTML
 </div>
 HTML;
 
-$extraScripts = '<script src="/assets/js/attendance.js"></script>';
+$extraScripts = '<script src="' . base_path() . '/assets/js/attendance.js"></script>';
 
 echo view('layouts/app', [
     'title' => $brigade['name'] . ' - Attendance',

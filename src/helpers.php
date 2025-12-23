@@ -53,8 +53,10 @@ function json_response(array $data, int $status = 200): void
     exit;
 }
 
-function redirect(string $url): void
+function redirect(string $path): void
 {
+    $basePath = config('app.base_path', '');
+    $url = $basePath . '/' . ltrim($path, '/');
     header('Location: ' . $url);
     exit;
 }
@@ -80,6 +82,17 @@ function sanitize(string $value): string
 function base_url(string $path = ''): string
 {
     return config('app.url') . '/' . ltrim($path, '/');
+}
+
+function base_path(): string
+{
+    return config('app.base_path', '');
+}
+
+function url(string $path = ''): string
+{
+    $basePath = base_path();
+    return $basePath . '/' . ltrim($path, '/');
 }
 
 function audit_log(int $brigadeId, ?int $calloutId, string $action, array $details = []): void

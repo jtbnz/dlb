@@ -79,10 +79,11 @@ ob_start();
 
 <script>
 const SLUG = '<?= $slug ?>';
+const BASE = window.BASE_PATH || '';
 let members = [];
 
 async function loadMembers() {
-    const response = await fetch(`/${SLUG}/admin/api/members`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/members`);
     const data = await response.json();
     members = data.members;
     renderMembers();
@@ -150,7 +151,7 @@ document.getElementById('member-form').addEventListener('submit', async function
     const rank = document.getElementById('member-rank').value;
     const joinDate = document.getElementById('member-joindate').value;
 
-    const url = id ? `/${SLUG}/admin/api/members/${id}` : `/${SLUG}/admin/api/members`;
+    const url = id ? `${BASE}/${SLUG}/admin/api/members/${id}` : `${BASE}/${SLUG}/admin/api/members`;
     const method = id ? 'PUT' : 'POST';
 
     await fetch(url, {
@@ -166,12 +167,12 @@ document.getElementById('member-form').addEventListener('submit', async function
 async function deactivateMember(id) {
     if (!confirm('Deactivate this member?')) return;
 
-    await fetch(`/${SLUG}/admin/api/members/${id}`, { method: 'DELETE' });
+    await fetch(`${BASE}/${SLUG}/admin/api/members/${id}`, { method: 'DELETE' });
     loadMembers();
 }
 
 async function activateMember(id) {
-    await fetch(`/${SLUG}/admin/api/members/${id}`, {
+    await fetch(`${BASE}/${SLUG}/admin/api/members/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: 1 })
@@ -195,7 +196,7 @@ document.getElementById('import-form').addEventListener('submit', async function
     const csv = document.getElementById('import-csv').value;
     const updateExisting = document.getElementById('update-existing').checked;
 
-    const response = await fetch(`/${SLUG}/admin/api/members/import`, {
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/members/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ csv, update_existing: updateExisting })

@@ -1,6 +1,7 @@
 // Attendance Entry Application
 (function() {
     const SLUG = window.BRIGADE_SLUG;
+    const BASE = window.BASE_PATH || '';
     let state = {
         callout: null,
         trucks: [],
@@ -38,7 +39,7 @@
     // Load initial data
     async function loadData() {
         try {
-            const response = await fetch(`/${SLUG}/api/callout/active`);
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/active`);
             const data = await response.json();
 
             state.trucks = data.trucks || [];
@@ -77,7 +78,7 @@
         }
 
         try {
-            const response = await fetch(`/${SLUG}/api/callout`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ icad_number: icadNumber })
@@ -115,7 +116,7 @@
         if (!newIcad) return;
 
         try {
-            await fetch(`/${SLUG}/api/callout/${state.callout.id}`, {
+            await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ icad_number: newIcad })
@@ -147,7 +148,7 @@
         state.callout.status = 'submitted';
 
         try {
-            const response = await fetch(`/${SLUG}/api/callout/${state.callout.id}/submit`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}/submit`, {
                 method: 'POST'
             });
 
@@ -191,7 +192,7 @@
         }
 
         updateSyncStatus('connecting');
-        state.eventSource = new EventSource(`/${SLUG}/api/sse/callout/${state.callout.id}`);
+        state.eventSource = new EventSource(`${BASE}/${SLUG}/api/sse/callout/${state.callout.id}`);
 
         state.eventSource.addEventListener('connected', () => {
             updateSyncStatus('connected');
@@ -448,7 +449,7 @@
         }
 
         try {
-            const response = await fetch(`/${SLUG}/api/attendance`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/attendance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -522,7 +523,7 @@
         }
 
         try {
-            const response = await fetch(`/${SLUG}/api/attendance/${attendanceId}`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/attendance/${attendanceId}`, {
                 method: 'DELETE'
             });
 

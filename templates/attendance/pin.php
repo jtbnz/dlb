@@ -13,7 +13,7 @@ $content = <<<HTML
     </form>
 
     <div class="pin-admin-link">
-        <a href="/{$slug}/admin">Admin Login</a>
+        <a href="' . base_path() . '/{$slug}/admin">Admin Login</a>
     </div>
 </div>
 
@@ -25,7 +25,7 @@ document.getElementById('pin-form').addEventListener('submit', async function(e)
     const errorEl = document.getElementById('pin-error');
 
     try {
-        const response = await fetch('/{$slug}/auth', {
+        const response = await fetch(window.BASE_PATH + '/{$slug}/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin })

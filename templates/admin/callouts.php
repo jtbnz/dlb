@@ -54,6 +54,7 @@ ob_start();
 
 <script>
 const SLUG = '<?= $slug ?>';
+const BASE = window.BASE_PATH || '';
 let currentCalloutId = null;
 
 async function searchCallouts() {
@@ -68,7 +69,7 @@ async function searchCallouts() {
     if (fromDate) params.append('from_date', fromDate);
     if (toDate) params.append('to_date', toDate);
 
-    const response = await fetch(`/${SLUG}/admin/api/callouts?${params}`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts?${params}`);
     const data = await response.json();
     renderCallouts(data.callouts);
 }
@@ -91,7 +92,7 @@ function renderCallouts(callouts) {
 
 async function viewCallout(id) {
     currentCalloutId = id;
-    const response = await fetch(`/${SLUG}/admin/api/callouts/${id}`);
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts/${id}`);
     const data = await response.json();
     const callout = data.callout;
 
@@ -137,7 +138,7 @@ async function unlockCallout() {
     if (!currentCalloutId) return;
     if (!confirm('Unlock this callout? It will become editable again.')) return;
 
-    await fetch(`/${SLUG}/admin/api/callouts/${currentCalloutId}/unlock`, { method: 'PUT' });
+    await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}/unlock`, { method: 'PUT' });
     closeCalloutModal();
     searchCallouts();
 }
@@ -167,7 +168,7 @@ function exportCallouts(format) {
     if (fromDate) params.append('from_date', fromDate);
     if (toDate) params.append('to_date', toDate);
 
-    window.location.href = `/${SLUG}/admin/api/callouts/export?${params}`;
+    window.location.href = `${BASE}/${SLUG}/admin/api/callouts/export?${params}`;
 }
 
 // Load on page load

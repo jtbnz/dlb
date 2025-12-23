@@ -1,3 +1,4 @@
+<?php $basePath = base_path(); ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,8 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title><?= sanitize($title ?? 'Brigade Attendance') ?></title>
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/assets/css/app.css">
+    <link rel="manifest" href="<?= $basePath ?>/manifest.json">
+    <link rel="stylesheet" href="<?= $basePath ?>/assets/css/app.css">
+    <script>window.BASE_PATH = '<?= $basePath ?>';</script>
     <?php if (isset($extraHead)) echo $extraHead; ?>
 </head>
 <body class="<?= $bodyClass ?? '' ?>">
@@ -16,7 +18,7 @@
     <script>
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
+            navigator.serviceWorker.register('<?= $basePath ?>/sw.js')
                 .then(reg => console.log('SW registered'))
                 .catch(err => console.log('SW registration failed:', err));
 
