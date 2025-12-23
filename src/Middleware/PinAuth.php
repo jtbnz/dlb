@@ -31,7 +31,7 @@ class PinAuth
             if (self::isApiRequest()) {
                 json_response(['error' => 'Unauthorized'], 401);
             }
-            redirect("/{$slug}");
+            redirect("{$slug}");
         }
 
         return $brigade;

@@ -120,7 +120,7 @@ class AdminController
             audit_log($brigade['id'], null, 'admin_logout', []);
         }
         AdminAuth::clearAuth($slug);
-        redirect("/{$slug}/admin");
+        redirect("{$slug}/admin");
     }
 
     public function dashboard(string $slug): void

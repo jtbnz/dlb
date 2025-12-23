@@ -43,7 +43,7 @@ class AdminAuth
             if (self::isApiRequest()) {
                 json_response(['error' => 'Unauthorized'], 401);
             }
-            redirect("/{$slug}/admin");
+            redirect("{$slug}/admin");
         }
 
         return $brigade;
