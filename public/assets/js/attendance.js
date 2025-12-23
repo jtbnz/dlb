@@ -169,10 +169,9 @@
             }
 
             closeSubmitModal();
-            elements.submitBtn.disabled = true;
-            elements.submitBtn.textContent = 'Submitted';
-            disableEditing();
             alert('Attendance submitted successfully!');
+            // Redirect back to ICAD entry page
+            window.location.href = `${BASE}/${SLUG}/attendance`;
         } catch (error) {
             console.error('Failed to submit:', error);
             alert('Failed to submit attendance. Please try again.');
