@@ -17,6 +17,14 @@ class Callout
         );
     }
 
+    public static function findByIcadNumber(int $brigadeId, string $icadNumber): ?array
+    {
+        return db()->queryOne(
+            "SELECT * FROM callouts WHERE brigade_id = ? AND icad_number = ? ORDER BY created_at DESC LIMIT 1",
+            [$brigadeId, $icadNumber]
+        );
+    }
+
     public static function findByBrigade(int $brigadeId, int $limit = 50, int $offset = 0): array
     {
         return db()->query(

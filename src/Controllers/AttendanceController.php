@@ -44,6 +44,7 @@ class AttendanceController
     public function createCallout(string $slug): void
     {
         $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
 
         $data = json_decode(file_get_contents('php://input'), true);
         $icadNumber = trim($data['icad_number'] ?? '');
@@ -53,11 +54,32 @@ class AttendanceController
             return;
         }
 
-        // Check for existing active callout
-        $existing = Callout::findActive($brigade['id']);
-        if ($existing) {
+        // Check for existing active callout (any ICAD)
+        $activeCallout = Callout::findActive($brigade['id']);
+        if ($activeCallout) {
             json_response(['error' => 'An active callout already exists'], 400);
             return;
+        }
+
+        // Check if this ICAD number has been used before
+        $existingCallout = Callout::findByIcadNumber($brigade['id'], $icadNumber);
+        if ($existingCallout) {
+            if ($existingCallout['status'] === 'active') {
+                // Resume existing active callout
+                $existingCallout['attendance'] = Attendance::findByCalloutGrouped($existingCallout['id']);
+                $existingCallout['available_members'] = Attendance::getAvailableMembers($existingCallout['id'], $brigade['id'], $memberOrder);
+                json_response(['callout' => $existingCallout, 'resumed' => true]);
+                return;
+            } else {
+                // Already submitted - let client know
+                $submittedAt = $existingCallout['submitted_at'] ?? $existingCallout['created_at'];
+                json_response([
+                    'already_submitted' => true,
+                    'submitted_at' => $submittedAt,
+                    'icad_number' => $icadNumber,
+                ]);
+                return;
+            }
         }
 
         $calloutId = Callout::create([
@@ -68,7 +90,6 @@ class AttendanceController
 
         audit_log($brigade['id'], $calloutId, 'callout_created', ['icad_number' => $icadNumber]);
 
-        $memberOrder = Brigade::getMemberOrder($brigade);
         $callout = Callout::findById($calloutId);
         $callout['attendance'] = [];
         $callout['available_members'] = Member::findByBrigadeOrdered($brigade['id'], $memberOrder);

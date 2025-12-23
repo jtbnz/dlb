@@ -92,6 +92,14 @@
                 return;
             }
 
+            // Check if this ICAD was already submitted
+            if (data.already_submitted) {
+                const submittedDate = new Date(data.submitted_at).toLocaleString();
+                alert(`This callout (${data.icad_number}) has already been submitted on ${submittedDate}.`);
+                document.getElementById('new-icad').value = '';
+                return;
+            }
+
             state.callout = data.callout;
             state.availableMembers = data.callout.available_members || state.members;
             showAttendanceArea();
