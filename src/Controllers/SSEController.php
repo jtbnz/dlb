@@ -20,6 +20,10 @@ class SSEController
             return;
         }
 
+        // Release session lock to allow other requests to proceed
+        // This is critical - PHP sessions block concurrent requests
+        session_write_close();
+
         // SSE headers
         header('Content-Type: text/event-stream');
         header('Cache-Control: no-cache');
