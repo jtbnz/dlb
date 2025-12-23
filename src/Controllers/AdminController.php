@@ -23,7 +23,7 @@ class AdminController
         }
 
         if (AdminAuth::check($slug)) {
-            redirect("/{$slug}/admin/dashboard");
+            redirect("{$slug}/admin/dashboard");
         }
 
         echo view('admin/login', ['brigade' => $brigade, 'slug' => $slug]);
@@ -52,7 +52,7 @@ class AdminController
             $this->clearRateLimit('admin_' . $slug);
             AdminAuth::setAuthenticated($slug);
             audit_log($brigade['id'], null, 'admin_login', ['username' => $username]);
-            json_response(['success' => true, 'redirect' => "/{$slug}/admin/dashboard"]);
+            json_response(['success' => true, 'redirect' => base_path() . "/{$slug}/admin/dashboard"]);
         } else {
             $this->incrementRateLimit('admin_' . $slug);
             audit_log($brigade['id'], null, 'admin_login_failed', ['username' => $username]);

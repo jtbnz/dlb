@@ -19,7 +19,7 @@ class AuthController
 
         // Already authenticated? Redirect to attendance
         if (PinAuth::check($slug)) {
-            redirect("/{$slug}/attendance");
+            redirect("{$slug}/attendance");
         }
 
         echo view('attendance/pin', [
@@ -53,7 +53,7 @@ class AuthController
             $this->clearRateLimit($slug);
             PinAuth::setAuthenticated($slug);
             audit_log($brigade['id'], null, 'pin_login', ['success' => true]);
-            json_response(['success' => true, 'redirect' => "/{$slug}/attendance"]);
+            json_response(['success' => true, 'redirect' => base_path() . "/{$slug}/attendance"]);
         } else {
             $this->incrementRateLimit($slug);
             audit_log($brigade['id'], null, 'pin_login', ['success' => false]);

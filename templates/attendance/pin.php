@@ -1,4 +1,5 @@
 <?php
+$basePath = base_path();
 $content = <<<HTML
 <div class="pin-container">
     <h1>{$brigade['name']}</h1>
@@ -13,7 +14,7 @@ $content = <<<HTML
     </form>
 
     <div class="pin-admin-link">
-        <a href="' . base_path() . '/{$slug}/admin">Admin Login</a>
+        <a href="{$basePath}/{$slug}/admin">Admin Login</a>
     </div>
 </div>
 

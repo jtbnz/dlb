@@ -1,4 +1,5 @@
 <?php
+$basePath = base_path();
 $content = <<<HTML
 <div class="login-container">
     <h1>{$brigade['name']}</h1>
@@ -18,7 +19,7 @@ $content = <<<HTML
     </form>
 
     <div class="login-back">
-        <a href="' . base_path() . '/{$slug}">Back to Attendance</a>
+        <a href="{$basePath}/{$slug}">Back to Attendance</a>
     </div>
 </div>
 
