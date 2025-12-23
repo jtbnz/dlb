@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /dlb/
+
+    # Redirect everything to public/index.php
+    # Except for actual files in public/assets/
+    RewriteCond %{REQUEST_URI} !^/dlb/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

@@ -2,7 +2,7 @@
     RewriteEngine On
 
     # Set the base path for subdirectory deployment
-    # Change this to match your deployment subdirectory (e.g., /dlb/)
+    # Change this to match your deployment path (e.g., /dlb/ or just /)
     RewriteBase /dlb/
 
     # Redirect to HTTPS (uncomment in production)
