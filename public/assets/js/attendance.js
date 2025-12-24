@@ -291,7 +291,11 @@
         elements.noCallout.style.display = 'none';
         elements.attendanceArea.style.display = 'flex';
 
-        elements.icadNumber.textContent = state.callout.icad_number;
+        // Display "Muster" with proper case for muster mode
+        const displayText = state.callout.icad_number.toLowerCase() === 'muster'
+            ? 'Muster'
+            : state.callout.icad_number;
+        elements.icadNumber.textContent = displayText;
         elements.changeIcadBtn.style.display = 'inline-block';
         elements.submitBtn.disabled = false;
 
@@ -305,6 +309,11 @@
     function render() {
         renderTrucks();
         renderAvailableMembers();
+    }
+
+    // Check if this is a muster (case-insensitive)
+    function isMuster() {
+        return state.callout && state.callout.icad_number.toLowerCase() === 'muster';
     }
 
     function renderTrucks() {
@@ -325,7 +334,15 @@
             });
         });
 
-        elements.trucksContainer.innerHTML = state.trucks.map(truck => {
+        // For muster mode: only show station, and show it first
+        let trucksToRender = state.trucks;
+        if (isMuster()) {
+            // Filter to only station trucks and put them first
+            const stations = state.trucks.filter(t => t.is_station);
+            trucksToRender = stations;
+        }
+
+        elements.trucksContainer.innerHTML = trucksToRender.map(truck => {
             const isStation = truck.is_station;
             const truckAttendance = attendanceMap.get(truck.id) || new Map();
 
