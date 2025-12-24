@@ -62,6 +62,11 @@ class AttendanceController
             return;
         }
 
+        // Append date to muster to make each unique (e.g., "Muster-2024-12-24")
+        if ($isMuster) {
+            $icadNumber = 'Muster-' . date('Y-m-d');
+        }
+
         // Check for existing active callout (any ICAD)
         $activeCallout = Callout::findActive($brigade['id']);
         if ($activeCallout) {

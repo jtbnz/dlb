@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigade-attendance-v5';
+const CACHE_NAME = 'brigade-attendance-v6';
 // Note: Static assets are cached dynamically on first request
 // to support deployment in any subdirectory
 const CACHEABLE_EXTENSIONS = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2'];
@@ -13,9 +13,11 @@ self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(
-                keys.filter(key => key !== CACHE_NAME)
+                keys.filter(key => key.startsWith('brigade-attendance') && key !== CACHE_NAME)
                     .map(key => caches.delete(key))
             );
+        }).catch(err => {
+            console.error('Cache cleanup error:', err);
         })
     );
     self.clients.claim();

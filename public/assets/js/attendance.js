@@ -291,11 +291,8 @@
         elements.noCallout.style.display = 'none';
         elements.attendanceArea.style.display = 'flex';
 
-        // Display "Muster" with proper case for muster mode
-        const displayText = state.callout.icad_number.toLowerCase() === 'muster'
-            ? 'Muster'
-            : state.callout.icad_number;
-        elements.icadNumber.textContent = displayText;
+        // Display the ICAD number (Muster-YYYY-MM-DD will show as stored)
+        elements.icadNumber.textContent = state.callout.icad_number;
         elements.changeIcadBtn.style.display = 'inline-block';
         elements.submitBtn.disabled = false;
 
@@ -311,9 +308,11 @@
         renderAvailableMembers();
     }
 
-    // Check if this is a muster (case-insensitive)
+    // Check if this is a muster (case-insensitive, also matches "Muster-YYYY-MM-DD")
     function isMuster() {
-        return state.callout && state.callout.icad_number.toLowerCase() === 'muster';
+        if (!state.callout) return false;
+        const icad = state.callout.icad_number.toLowerCase();
+        return icad === 'muster' || icad.startsWith('muster-');
     }
 
     function renderTrucks() {
