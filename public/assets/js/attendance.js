@@ -333,16 +333,16 @@
             });
         });
 
-        // For muster mode: only show station, and show it first
+        // For muster mode: only show station trucks (is_station = 1 or "1")
         let trucksToRender = state.trucks;
         if (isMuster()) {
-            // Filter to only station trucks and put them first
-            const stations = state.trucks.filter(t => t.is_station);
+            // Filter to only station trucks - check for both numeric 1 and string "1"
+            const stations = state.trucks.filter(t => t.is_station == 1);
             trucksToRender = stations;
         }
 
         elements.trucksContainer.innerHTML = trucksToRender.map(truck => {
-            const isStation = truck.is_station;
+            const isStation = truck.is_station == 1;
             const truckAttendance = attendanceMap.get(truck.id) || new Map();
 
             let positionsHtml = '';
