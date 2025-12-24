@@ -54,6 +54,14 @@ class AttendanceController
             return;
         }
 
+        // Validate ICAD format: must start with F (case-insensitive) or be "muster"
+        $isMuster = strtolower($icadNumber) === 'muster';
+        $startsWithF = strtoupper(substr($icadNumber, 0, 1)) === 'F';
+        if (!$isMuster && !$startsWithF) {
+            json_response(['error' => 'ICAD number must start with F or be "muster"'], 400);
+            return;
+        }
+
         // Check for existing active callout (any ICAD)
         $activeCallout = Callout::findActive($brigade['id']);
         if ($activeCallout) {
