@@ -18,8 +18,13 @@
     <script>
         // Register service worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('<?= $basePath ?>/sw.js')
-                .then(reg => console.log('SW registered'))
+            // Force update check on every page load
+            navigator.serviceWorker.register('<?= $basePath ?>/sw.js', { updateViaCache: 'none' })
+                .then(reg => {
+                    console.log('SW registered');
+                    // Check for updates
+                    reg.update();
+                })
                 .catch(err => console.log('SW registration failed:', err));
 
             // Sync when back online

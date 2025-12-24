@@ -178,11 +178,24 @@
             }
 
             closeSubmitModal();
-            alert('Attendance submitted successfully!');
-            // Reset state and redirect back to ICAD entry page
+
+            // Close SSE connection before redirect
+            if (state.eventSource) {
+                state.eventSource.close();
+                state.eventSource = null;
+            }
+
+            // Reset state
             state.callout = null;
             state.availableMembers = [];
-            window.location.replace(`${BASE}/${SLUG}/attendance`);
+
+            // Show success message then redirect
+            alert('Attendance submitted successfully!');
+
+            // Force redirect - use setTimeout to ensure alert has closed
+            setTimeout(() => {
+                window.location.href = `${BASE}/${SLUG}/attendance`;
+            }, 100);
         } catch (error) {
             console.error('Failed to submit:', error);
             alert('Failed to submit attendance. Please try again.');
