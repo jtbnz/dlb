@@ -93,6 +93,11 @@ class Callout
         return self::update($id, ['status' => 'active']);
     }
 
+    public static function delete(int $id): int
+    {
+        return db()->delete('callouts', 'id = ?', [$id]);
+    }
+
     public static function getWithAttendance(int $id): ?array
     {
         $callout = self::findById($id);

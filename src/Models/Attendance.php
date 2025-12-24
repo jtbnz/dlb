@@ -79,6 +79,11 @@ class Attendance
         return db()->delete('attendance', 'callout_id = ? AND member_id = ?', [$calloutId, $memberId]);
     }
 
+    public static function deleteByCallout(int $calloutId): int
+    {
+        return db()->delete('attendance', 'callout_id = ?', [$calloutId]);
+    }
+
     public static function getAssignedMemberIds(int $calloutId): array
     {
         $results = db()->query("SELECT member_id FROM attendance WHERE callout_id = ?", [$calloutId]);

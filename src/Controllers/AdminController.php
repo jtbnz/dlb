@@ -437,6 +437,26 @@ class AdminController
         json_response(['success' => true]);
     }
 
+    public function apiDeleteCallout(string $slug, string $calloutId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        // Delete all attendance records first
+        Attendance::deleteByCallout((int)$calloutId);
+
+        // Delete the callout
+        Callout::delete((int)$calloutId);
+
+        audit_log($brigade['id'], (int)$calloutId, 'callout_deleted', ['icad_number' => $callout['icad_number']]);
+        json_response(['success' => true]);
+    }
+
     public function apiExportCallouts(string $slug): void
     {
         $brigade = AdminAuth::requireAuth($slug);

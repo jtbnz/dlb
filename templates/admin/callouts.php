@@ -46,6 +46,7 @@ ob_start();
             <!-- Details loaded via JS -->
         </div>
         <div class="modal-buttons">
+            <button type="button" class="btn btn-danger" id="delete-btn" onclick="deleteCallout()">Delete</button>
             <button type="button" class="btn" onclick="closeCalloutModal()">Close</button>
             <button type="button" class="btn btn-primary" id="unlock-btn" style="display:none;" onclick="unlockCallout()">Unlock</button>
         </div>
@@ -141,6 +142,28 @@ async function unlockCallout() {
     await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}/unlock`, { method: 'PUT' });
     closeCalloutModal();
     searchCallouts();
+}
+
+async function deleteCallout() {
+    if (!currentCalloutId) return;
+    if (!confirm('Are you sure you want to delete this callout? This will permanently remove all attendance records for this callout.')) return;
+    if (!confirm('This cannot be undone. Are you absolutely sure?')) return;
+
+    try {
+        const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}`, { method: 'DELETE' });
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        alert('Callout deleted successfully');
+        closeCalloutModal();
+        searchCallouts();
+    } catch (error) {
+        alert('Failed to delete callout');
+    }
 }
 
 function formatDate(dateStr) {
