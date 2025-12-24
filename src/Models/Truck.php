@@ -11,10 +11,17 @@ class Truck
 
     public static function findByBrigade(int $brigadeId): array
     {
-        return db()->query(
+        $trucks = db()->query(
             "SELECT * FROM trucks WHERE brigade_id = ? ORDER BY sort_order, id",
             [$brigadeId]
         );
+
+        // Ensure is_station is properly cast to integer for JSON
+        foreach ($trucks as &$truck) {
+            $truck['is_station'] = (int)($truck['is_station'] ?? 0);
+        }
+
+        return $trucks;
     }
 
     public static function findByBrigadeWithPositions(int $brigadeId): array
