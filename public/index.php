@@ -66,9 +66,11 @@ $routes = [
     // Attendance entry (PIN required)
     ['GET', '/([a-z0-9-]+)/attendance', 'AttendanceController@index'],
     ['GET', '/([a-z0-9-]+)/api/callout/active', 'AttendanceController@getActive'],
+    ['GET', '/([a-z0-9-]+)/api/callout/last-attendance', 'AttendanceController@getLastCallAttendance'],
     ['POST', '/([a-z0-9-]+)/api/callout', 'AttendanceController@createCallout'],
     ['PUT', '/([a-z0-9-]+)/api/callout/([0-9]+)', 'AttendanceController@updateCallout'],
     ['POST', '/([a-z0-9-]+)/api/callout/([0-9]+)/submit', 'AttendanceController@submitCallout'],
+    ['POST', '/([a-z0-9-]+)/api/callout/([0-9]+)/copy-last', 'AttendanceController@copyLastCall'],
     ['GET', '/([a-z0-9-]+)/api/members', 'AttendanceController@getMembers'],
     ['GET', '/([a-z0-9-]+)/api/trucks', 'AttendanceController@getTrucks'],
     ['POST', '/([a-z0-9-]+)/api/attendance', 'AttendanceController@addAttendance'],

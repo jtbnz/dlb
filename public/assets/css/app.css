@@ -102,6 +102,21 @@ body {
     cursor: not-allowed;
 }
 
+.btn-submitted {
+    background: #86efac;
+    color: var(--gray-800);
+}
+
+.btn-submitted:disabled {
+    opacity: 1;
+}
+
+.submitted-time {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-right: 0.5rem;
+}
+
 /* Form Elements */
 input, select, textarea {
     width: 100%;

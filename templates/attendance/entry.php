@@ -10,6 +10,7 @@ $content = <<<HTML
                 <span id="icad-label">ICAD:</span>
                 <span id="icad-number">-</span>
                 <button id="change-icad-btn" class="btn-small" style="display:none;">Change</button>
+                <button id="copy-last-btn" class="btn-small" style="display:none;">Copy Last Call</button>
             </div>
         </div>
         <div class="header-right">
@@ -17,7 +18,9 @@ $content = <<<HTML
                 <span class="status-dot"></span>
                 <span class="status-text">Connecting...</span>
             </div>
+            <span id="submitted-time" class="submitted-time" style="display:none;"></span>
             <button id="submit-btn" class="btn btn-success" disabled>Submit</button>
+            <button id="close-btn" class="btn" style="display:none;">Close</button>
         </div>
     </header>
 

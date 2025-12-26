@@ -184,6 +184,103 @@ class AttendanceController
         json_response(['trucks' => Truck::findByBrigadeWithPositions($brigade['id'])]);
     }
 
+    public function getLastCallAttendance(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        // Get the last submitted callout for this brigade
+        $lastCallout = Callout::findLastSubmitted($brigade['id']);
+
+        if (!$lastCallout) {
+            json_response(['attendance' => [], 'message' => 'No previous callout found']);
+            return;
+        }
+
+        $attendance = Attendance::findByCallout($lastCallout['id']);
+
+        json_response([
+            'callout' => [
+                'id' => $lastCallout['id'],
+                'icad_number' => $lastCallout['icad_number'],
+                'submitted_at' => $lastCallout['submitted_at'],
+            ],
+            'attendance' => $attendance,
+        ]);
+    }
+
+    public function copyLastCall(string $slug, string $calloutId): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid callout'], 400);
+            return;
+        }
+
+        if ($callout['status'] !== 'active') {
+            json_response(['error' => 'Cannot modify a submitted callout'], 400);
+            return;
+        }
+
+        // Get the last submitted callout
+        $lastCallout = Callout::findLastSubmitted($brigade['id']);
+        if (!$lastCallout) {
+            json_response(['error' => 'No previous callout to copy from'], 400);
+            return;
+        }
+
+        // Get attendance from last callout
+        $lastAttendance = Attendance::findByCallout($lastCallout['id']);
+
+        // Copy each attendance record to the new callout
+        $copied = 0;
+        foreach ($lastAttendance as $record) {
+            // Check if member is still active
+            $member = Member::findById($record['member_id']);
+            if (!$member || !$member['is_active']) {
+                continue;
+            }
+
+            // Check if truck and position still exist
+            $truck = Truck::findById($record['truck_id']);
+            $position = \App\Models\Position::findById($record['position_id']);
+            if (!$truck || !$position) {
+                continue;
+            }
+
+            try {
+                Attendance::create([
+                    'callout_id' => (int)$calloutId,
+                    'member_id' => $record['member_id'],
+                    'truck_id' => $record['truck_id'],
+                    'position_id' => $record['position_id'],
+                ]);
+                $copied++;
+            } catch (\Exception $e) {
+                // Skip if there's a conflict
+            }
+        }
+
+        audit_log($brigade['id'], (int)$calloutId, 'attendance_copied', [
+            'from_callout' => $lastCallout['id'],
+            'from_icad' => $lastCallout['icad_number'],
+            'records_copied' => $copied,
+        ]);
+
+        // Notify SSE clients
+        $this->notifySSE((int)$calloutId);
+
+        json_response([
+            'success' => true,
+            'copied' => $copied,
+            'from_icad' => $lastCallout['icad_number'],
+            'attendance' => Attendance::findByCalloutGrouped((int)$calloutId),
+            'available_members' => Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder),
+        ]);
+    }
+
     public function addAttendance(string $slug): void
     {
         $brigade = PinAuth::requireAuth($slug);

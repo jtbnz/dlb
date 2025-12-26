@@ -25,6 +25,14 @@ class Callout
         );
     }
 
+    public static function findLastSubmitted(int $brigadeId): ?array
+    {
+        return db()->queryOne(
+            "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'submitted' ORDER BY submitted_at DESC LIMIT 1",
+            [$brigadeId]
+        );
+    }
+
     public static function findByBrigade(int $brigadeId, int $limit = 50, int $offset = 0): array
     {
         return db()->query(

@@ -22,7 +22,10 @@
         memberCount: document.getElementById('member-count'),
         icadNumber: document.getElementById('icad-number'),
         changeIcadBtn: document.getElementById('change-icad-btn'),
+        copyLastBtn: document.getElementById('copy-last-btn'),
         submitBtn: document.getElementById('submit-btn'),
+        closeBtn: document.getElementById('close-btn'),
+        submittedTime: document.getElementById('submitted-time'),
         syncStatus: document.getElementById('sync-status'),
         newCalloutForm: document.getElementById('new-callout-form'),
         icadModal: document.getElementById('icad-modal'),
@@ -64,6 +67,8 @@
     function setupEventListeners() {
         elements.newCalloutForm.addEventListener('submit', handleNewCallout);
         elements.changeIcadBtn.addEventListener('click', showIcadModal);
+        elements.copyLastBtn.addEventListener('click', handleCopyLastCall);
+        elements.closeBtn.addEventListener('click', handleClose);
         document.getElementById('change-icad-form').addEventListener('submit', handleChangeIcad);
         elements.submitBtn.addEventListener('click', showSubmitModal);
     }
@@ -140,6 +145,55 @@
         }
     }
 
+    async function handleCopyLastCall() {
+        if (!state.callout || state.callout.status !== 'active') return;
+
+        if (!confirm('Copy attendance from the last submitted callout? This will add all members from that call to this one.')) {
+            return;
+        }
+
+        elements.copyLastBtn.disabled = true;
+        elements.copyLastBtn.textContent = 'Copying...';
+
+        try {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}/copy-last`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            // Update state with new attendance
+            if (data.attendance) {
+                state.callout.attendance = data.attendance;
+            }
+            if (data.available_members) {
+                state.availableMembers = data.available_members;
+            }
+
+            render();
+            alert(`Copied ${data.copied} attendees from ${data.from_icad}`);
+        } catch (error) {
+            console.error('Failed to copy last call:', error);
+            alert('Failed to copy attendance. Please try again.');
+        } finally {
+            elements.copyLastBtn.disabled = false;
+            elements.copyLastBtn.textContent = 'Copy Last Call';
+        }
+    }
+
+    function handleClose() {
+        // Reset state and go back to new callout entry
+        state.callout = null;
+        state.availableMembers = [];
+        showNoCallout();
+        document.getElementById('new-icad').value = '';
+    }
+
     function showSubmitModal() {
         elements.submitModal.style.display = 'flex';
     }
@@ -179,29 +233,46 @@
 
             closeSubmitModal();
 
-            // Close SSE connection before redirect
+            // Close SSE connection
             if (state.eventSource) {
                 state.eventSource.close();
                 state.eventSource = null;
             }
 
-            // Reset state
-            state.callout = null;
-            state.availableMembers = [];
-
-            // Show success message then redirect
-            alert('Attendance submitted successfully!');
-
-            // Force redirect - use setTimeout to ensure alert has closed
-            setTimeout(() => {
-                window.location.href = `${BASE}/${SLUG}/attendance`;
-            }, 100);
+            // Show submitted state
+            showSubmittedState();
         } catch (error) {
             console.error('Failed to submit:', error);
             alert('Failed to submit attendance. Please try again.');
             state.callout.status = 'active';
         }
     };
+
+    function showSubmittedState() {
+        // Update submit button to show submitted
+        elements.submitBtn.disabled = true;
+        elements.submitBtn.textContent = 'Submitted';
+        elements.submitBtn.classList.remove('btn-success');
+        elements.submitBtn.classList.add('btn-submitted');
+
+        // Show submitted time
+        const now = new Date();
+        elements.submittedTime.textContent = `Submitted at ${now.toLocaleTimeString()}`;
+        elements.submittedTime.style.display = 'inline';
+
+        // Show close button
+        elements.closeBtn.style.display = 'inline-block';
+
+        // Hide change and copy buttons
+        elements.changeIcadBtn.style.display = 'none';
+        elements.copyLastBtn.style.display = 'none';
+
+        // Disable editing
+        disableEditing();
+
+        // Update sync status
+        updateSyncStatus('offline');
+    }
 
     function connectSSE() {
         // Don't connect if already submitted
@@ -306,8 +377,21 @@
 
         // Display the ICAD number (Muster-YYYY-MM-DD will show as stored)
         elements.icadNumber.textContent = state.callout.icad_number;
-        elements.changeIcadBtn.style.display = 'inline-block';
-        elements.submitBtn.disabled = false;
+
+        // Check if already submitted
+        if (state.callout.status === 'submitted') {
+            showSubmittedState();
+        } else {
+            // Show active state controls
+            elements.changeIcadBtn.style.display = 'inline-block';
+            elements.copyLastBtn.style.display = 'inline-block';
+            elements.submitBtn.disabled = false;
+            elements.submitBtn.textContent = 'Submit';
+            elements.submitBtn.classList.add('btn-success');
+            elements.submitBtn.classList.remove('btn-submitted');
+            elements.submittedTime.style.display = 'none';
+            elements.closeBtn.style.display = 'none';
+        }
 
         render();
     }
