@@ -35,6 +35,7 @@ ob_start();
                 <label for="truck-template">Position Template</label>
                 <select id="truck-template">
                     <option value="full">Full Crew (OIC, DR, 1, 2, 3, 4)</option>
+                    <option value="standard">Standard (OIC, DR, 1, 2, 3)</option>
                     <option value="medium">Medium (OIC, DR, 1, 2)</option>
                     <option value="light">Light (OIC, DR)</option>
                 </select>

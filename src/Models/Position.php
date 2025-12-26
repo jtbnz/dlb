@@ -37,6 +37,7 @@ class Position
         $templates = [
             'light' => ['OIC', 'DR'],
             'medium' => ['OIC', 'DR', '1', '2'],
+            'standard' => ['OIC', 'DR', '1', '2', '3'],
             'full' => ['OIC', 'DR', '1', '2', '3', '4'],
             'station' => ['Standby'],
         ];
