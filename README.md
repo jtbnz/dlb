@@ -8,8 +8,8 @@ A web-based attendance tracking system designed for volunteer fire brigades to r
 - **Real-time Callout Management**: Start new callouts with ICAD numbers
 - **Truck & Position Assignment**: Assign members to specific positions on trucks (OIC, Driver, Crew 1-4)
 - **Station Standby**: Track members remaining at the station
-- **Live Synchronization**: Multiple devices can update attendance simultaneously via Server-Sent Events (SSE)
-- **Mobile-Optimized**: Responsive design works on phones, tablets, and desktop
+- **Live Synchronisation**: Multiple devices can update attendance simultaneously via Server-Sent Events (SSE)
+- **Mobile-Optimised**: Responsive design works on phones, tablets, and desktop
 - **PWA Support**: Install as an app on mobile devices for quick access
 
 ### Admin Dashboard
