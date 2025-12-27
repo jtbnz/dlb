@@ -1062,6 +1062,50 @@ input:focus, select:focus, textarea:focus {
     color: var(--gray-600);
 }
 
+/* Drag and Drop */
+.member-chip {
+    touch-action: none; /* Prevent scroll during drag on touch */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.member-chip.dragging {
+    opacity: 0.5;
+}
+
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    background: var(--primary);
+    color: white;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius);
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.position-slot.drop-target {
+    border-color: var(--primary);
+    border-style: solid;
+    background: rgba(220, 38, 38, 0.1);
+    transform: scale(1.02);
+}
+
+.standby-add.drop-target {
+    border-color: var(--primary);
+    background: rgba(220, 38, 38, 0.1);
+    transform: scale(1.05);
+}
+
+.position-slot.drop-invalid {
+    border-color: var(--gray-400);
+    background: var(--gray-100);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .attendance-header {

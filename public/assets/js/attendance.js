@@ -695,5 +695,239 @@
     `;
     document.head.appendChild(style);
 
+    // ==========================================
+    // DRAG AND DROP FUNCTIONALITY
+    // ==========================================
+
+    const dragState = {
+        isDragging: false,
+        draggedMember: null,
+        ghostElement: null,
+        startX: 0,
+        startY: 0,
+        dragThreshold: 10, // Pixels to move before drag starts
+        hasDragStarted: false
+    };
+
+    // Create ghost element that follows cursor/finger
+    function createGhost(memberName) {
+        const ghost = document.createElement('div');
+        ghost.className = 'drag-ghost';
+        ghost.textContent = memberName;
+        document.body.appendChild(ghost);
+        return ghost;
+    }
+
+    // Update ghost position
+    function updateGhostPosition(x, y) {
+        if (dragState.ghostElement) {
+            dragState.ghostElement.style.left = x + 'px';
+            dragState.ghostElement.style.top = y + 'px';
+        }
+    }
+
+    // Remove ghost element
+    function removeGhost() {
+        if (dragState.ghostElement) {
+            dragState.ghostElement.remove();
+            dragState.ghostElement = null;
+        }
+    }
+
+    // Find drop target at position
+    function getDropTargetAt(x, y) {
+        // Hide ghost temporarily to get element underneath
+        if (dragState.ghostElement) {
+            dragState.ghostElement.style.display = 'none';
+        }
+
+        const element = document.elementFromPoint(x, y);
+
+        if (dragState.ghostElement) {
+            dragState.ghostElement.style.display = '';
+        }
+
+        if (!element) return null;
+
+        // Check if it's a position slot (unfilled)
+        const positionSlot = element.closest('.position-slot:not(.filled)');
+        if (positionSlot) {
+            return { type: 'position', element: positionSlot };
+        }
+
+        // Check if it's a standby add button
+        const standbyAdd = element.closest('.standby-add');
+        if (standbyAdd) {
+            return { type: 'standby', element: standbyAdd };
+        }
+
+        return null;
+    }
+
+    // Clear all drop target highlights
+    function clearDropTargetHighlights() {
+        document.querySelectorAll('.drop-target, .drop-invalid').forEach(el => {
+            el.classList.remove('drop-target', 'drop-invalid');
+        });
+    }
+
+    // Handle drag start (mouse or touch)
+    function handleDragStart(e, memberId, memberName) {
+        // Don't start drag if callout is submitted
+        if (state.callout && state.callout.status === 'submitted') return;
+
+        const touch = e.touches ? e.touches[0] : e;
+
+        dragState.startX = touch.clientX;
+        dragState.startY = touch.clientY;
+        dragState.draggedMember = { id: memberId, name: memberName };
+        dragState.isDragging = true;
+        dragState.hasDragStarted = false;
+    }
+
+    // Handle drag move (mouse or touch)
+    function handleDragMove(e) {
+        if (!dragState.isDragging || !dragState.draggedMember) return;
+
+        const touch = e.touches ? e.touches[0] : e;
+        const x = touch.clientX;
+        const y = touch.clientY;
+
+        // Check if we've moved enough to start dragging
+        if (!dragState.hasDragStarted) {
+            const dx = x - dragState.startX;
+            const dy = y - dragState.startY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < dragState.dragThreshold) {
+                return; // Not moved enough yet
+            }
+
+            // Start the drag
+            dragState.hasDragStarted = true;
+            dragState.ghostElement = createGhost(dragState.draggedMember.name);
+
+            // Mark the source chip as dragging
+            const sourceChip = document.querySelector(`.member-chip[data-member-id="${dragState.draggedMember.id}"]`);
+            if (sourceChip) {
+                sourceChip.classList.add('dragging');
+            }
+
+            // Deselect any selected member (we're dragging now)
+            state.selectedMember = null;
+            document.querySelectorAll('.member-chip.selected').forEach(chip => {
+                chip.classList.remove('selected');
+            });
+        }
+
+        // Prevent scrolling while dragging
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+
+        // Update ghost position
+        updateGhostPosition(x, y);
+
+        // Highlight drop target
+        clearDropTargetHighlights();
+        const target = getDropTargetAt(x, y);
+        if (target) {
+            target.element.classList.add('drop-target');
+        }
+    }
+
+    // Handle drag end (mouse or touch)
+    function handleDragEnd(e) {
+        if (!dragState.isDragging) return;
+
+        const wasDragging = dragState.hasDragStarted;
+        const draggedMember = dragState.draggedMember;
+
+        // Get final position
+        let x, y;
+        if (e.changedTouches) {
+            x = e.changedTouches[0].clientX;
+            y = e.changedTouches[0].clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
+
+        // Clean up drag state
+        clearDropTargetHighlights();
+        removeGhost();
+
+        // Remove dragging class from source
+        document.querySelectorAll('.member-chip.dragging').forEach(chip => {
+            chip.classList.remove('dragging');
+        });
+
+        // Reset drag state
+        dragState.isDragging = false;
+        dragState.hasDragStarted = false;
+        dragState.draggedMember = null;
+
+        // If we actually dragged (not just clicked), try to drop
+        if (wasDragging && draggedMember) {
+            const target = getDropTargetAt(x, y);
+            if (target) {
+                // Extract truck and position IDs from the onclick attribute
+                const onclick = target.element.getAttribute('onclick');
+                if (onclick) {
+                    const match = onclick.match(/\((\d+),\s*(\d+)\)/);
+                    if (match) {
+                        const truckId = parseInt(match[1]);
+                        const positionId = parseInt(match[2]);
+                        assignMember(draggedMember.id, truckId, positionId);
+                    }
+                }
+            }
+        }
+    }
+
+    // Setup drag listeners on member chips
+    function setupDragListeners() {
+        // Use event delegation on the available-members container
+        const container = elements.availableMembers;
+        if (!container) return;
+
+        // Remove existing listeners by cloning (clean slate)
+        // Note: We use event delegation, so we set up once on the container
+
+        // Mouse events
+        container.addEventListener('mousedown', function(e) {
+            const chip = e.target.closest('.member-chip');
+            if (!chip) return;
+
+            const memberId = parseInt(chip.dataset.memberId);
+            const member = state.availableMembers.find(m => m.id === memberId);
+            if (!member) return;
+
+            handleDragStart(e, memberId, member.display_name || member.name);
+        });
+
+        // Touch events
+        container.addEventListener('touchstart', function(e) {
+            const chip = e.target.closest('.member-chip');
+            if (!chip) return;
+
+            const memberId = parseInt(chip.dataset.memberId);
+            const member = state.availableMembers.find(m => m.id === memberId);
+            if (!member) return;
+
+            handleDragStart(e, memberId, member.display_name || member.name);
+        }, { passive: true });
+
+        // Global move and end listeners
+        document.addEventListener('mousemove', handleDragMove);
+        document.addEventListener('mouseup', handleDragEnd);
+        document.addEventListener('touchmove', handleDragMove, { passive: false });
+        document.addEventListener('touchend', handleDragEnd);
+        document.addEventListener('touchcancel', handleDragEnd);
+    }
+
+    // Initialize drag and drop after DOM is ready
+    setupDragListeners();
+
     init();
 })();
