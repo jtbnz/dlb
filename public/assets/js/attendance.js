@@ -453,7 +453,10 @@
                         <div class="standby-section">
                             <div class="standby-members">
                                 ${standbyMembers.map(m => `
-                                    <div class="standby-member" onclick="removeAttendance(${m.id})">
+                                    <div class="standby-member"
+                                         data-attendance-id="${m.id}"
+                                         data-member-id="${m.member_id}"
+                                         onclick="removeAttendance(${m.id})">
                                         <span>${escapeHtml(m.member_name)}</span>
                                         <span class="remove">×</span>
                                     </div>
@@ -474,6 +477,7 @@
 
                             return `
                                 <div class="position-slot ${isFilled ? 'filled' : ''}"
+                                     ${isFilled ? `data-attendance-id="${assigned.id}" data-member-id="${assigned.member_id}"` : ''}
                                      onclick="${isFilled ? `removeAttendance(${assigned.id})` : `selectPosition(${truck.id}, ${pos.id})`}">
                                     <div class="position-name">${escapeHtml(pos.name)}</div>
                                     <div class="member-name">${isFilled ? escapeHtml(assigned.member_name) : '-'}</div>
@@ -702,6 +706,8 @@
     const dragState = {
         isDragging: false,
         draggedMember: null,
+        dragSource: null, // 'available', 'position', or 'standby'
+        sourceAttendanceId: null, // For dragging from filled positions
         ghostElement: null,
         startX: 0,
         startY: 0,
@@ -749,16 +755,28 @@
 
         if (!element) return null;
 
-        // Check if it's a position slot (unfilled)
-        const positionSlot = element.closest('.position-slot:not(.filled)');
-        if (positionSlot) {
-            return { type: 'position', element: positionSlot };
+        // Check if it's a position slot (unfilled) - valid drop target
+        const emptyPositionSlot = element.closest('.position-slot:not(.filled)');
+        if (emptyPositionSlot) {
+            return { type: 'position', element: emptyPositionSlot, filled: false };
+        }
+
+        // Check if it's a filled position slot - for swapping
+        const filledPositionSlot = element.closest('.position-slot.filled');
+        if (filledPositionSlot) {
+            return { type: 'position', element: filledPositionSlot, filled: true };
         }
 
         // Check if it's a standby add button
         const standbyAdd = element.closest('.standby-add');
         if (standbyAdd) {
             return { type: 'standby', element: standbyAdd };
+        }
+
+        // Check if dropping on the available members panel (to unassign)
+        const availablePanel = element.closest('.available-members') || element.closest('.members-panel');
+        if (availablePanel && dragState.dragSource !== 'available') {
+            return { type: 'available', element: availablePanel };
         }
 
         return null;
@@ -772,7 +790,7 @@
     }
 
     // Handle drag start (mouse or touch)
-    function handleDragStart(e, memberId, memberName) {
+    function handleDragStart(e, memberId, memberName, source, attendanceId) {
         // Don't start drag if callout is submitted
         if (state.callout && state.callout.status === 'submitted') return;
 
@@ -781,6 +799,8 @@
         dragState.startX = touch.clientX;
         dragState.startY = touch.clientY;
         dragState.draggedMember = { id: memberId, name: memberName };
+        dragState.dragSource = source || 'available';
+        dragState.sourceAttendanceId = attendanceId || null;
         dragState.isDragging = true;
         dragState.hasDragStarted = false;
     }
@@ -807,10 +827,22 @@
             dragState.hasDragStarted = true;
             dragState.ghostElement = createGhost(dragState.draggedMember.name);
 
-            // Mark the source chip as dragging
-            const sourceChip = document.querySelector(`.member-chip[data-member-id="${dragState.draggedMember.id}"]`);
-            if (sourceChip) {
-                sourceChip.classList.add('dragging');
+            // Mark the source element as dragging
+            if (dragState.dragSource === 'available') {
+                const sourceChip = document.querySelector(`.member-chip[data-member-id="${dragState.draggedMember.id}"]`);
+                if (sourceChip) {
+                    sourceChip.classList.add('dragging');
+                }
+            } else if (dragState.dragSource === 'position') {
+                const sourceSlot = document.querySelector(`.position-slot[data-attendance-id="${dragState.sourceAttendanceId}"]`);
+                if (sourceSlot) {
+                    sourceSlot.classList.add('dragging');
+                }
+            } else if (dragState.dragSource === 'standby') {
+                const sourceStandby = document.querySelector(`.standby-member[data-attendance-id="${dragState.sourceAttendanceId}"]`);
+                if (sourceStandby) {
+                    sourceStandby.classList.add('dragging');
+                }
             }
 
             // Deselect any selected member (we're dragging now)
@@ -832,16 +864,23 @@
         clearDropTargetHighlights();
         const target = getDropTargetAt(x, y);
         if (target) {
+            // Don't highlight the same slot we're dragging from
+            if (target.type === 'position' && target.filled &&
+                target.element.dataset.attendanceId === String(dragState.sourceAttendanceId)) {
+                return;
+            }
             target.element.classList.add('drop-target');
         }
     }
 
     // Handle drag end (mouse or touch)
-    function handleDragEnd(e) {
+    async function handleDragEnd(e) {
         if (!dragState.isDragging) return;
 
         const wasDragging = dragState.hasDragStarted;
         const draggedMember = dragState.draggedMember;
+        const dragSource = dragState.dragSource;
+        const sourceAttendanceId = dragState.sourceAttendanceId;
 
         // Get final position
         let x, y;
@@ -857,66 +896,195 @@
         clearDropTargetHighlights();
         removeGhost();
 
-        // Remove dragging class from source
-        document.querySelectorAll('.member-chip.dragging').forEach(chip => {
-            chip.classList.remove('dragging');
+        // Remove dragging class from all elements
+        document.querySelectorAll('.dragging').forEach(el => {
+            el.classList.remove('dragging');
         });
 
         // Reset drag state
         dragState.isDragging = false;
         dragState.hasDragStarted = false;
         dragState.draggedMember = null;
+        dragState.dragSource = null;
+        dragState.sourceAttendanceId = null;
 
         // If we actually dragged (not just clicked), try to drop
         if (wasDragging && draggedMember) {
             const target = getDropTargetAt(x, y);
             if (target) {
-                // Extract truck and position IDs from the onclick attribute
-                const onclick = target.element.getAttribute('onclick');
-                if (onclick) {
-                    const match = onclick.match(/\((\d+),\s*(\d+)\)/);
-                    if (match) {
-                        const truckId = parseInt(match[1]);
-                        const positionId = parseInt(match[2]);
-                        assignMember(draggedMember.id, truckId, positionId);
+                // Handle different drop scenarios
+                if (target.type === 'available' && sourceAttendanceId) {
+                    // Dropping on available panel = remove from position
+                    await window.removeAttendance(sourceAttendanceId);
+                } else if (target.type === 'position' || target.type === 'standby') {
+                    // Extract truck and position IDs from the onclick attribute
+                    const onclick = target.element.getAttribute('onclick');
+                    if (onclick) {
+                        const match = onclick.match(/\((\d+),\s*(\d+)\)/);
+                        if (match) {
+                            const truckId = parseInt(match[1]);
+                            const positionId = parseInt(match[2]);
+
+                            if (dragSource === 'available') {
+                                // Dragging from available list to position
+                                await assignMember(draggedMember.id, truckId, positionId);
+                            } else if (sourceAttendanceId) {
+                                // Dragging from one position to another (move)
+                                // First remove from old position, then assign to new
+                                await moveMember(sourceAttendanceId, draggedMember.id, truckId, positionId);
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // Setup drag listeners on member chips
+    // Move member from one position to another
+    async function moveMember(oldAttendanceId, memberId, newTruckId, newPositionId) {
+        if (state.isProcessing) return;
+        state.isProcessing = true;
+
+        // Temporarily close SSE to prevent blocking
+        if (state.eventSource) {
+            state.eventSource.close();
+            state.eventSource = null;
+        }
+
+        try {
+            // First, remove from old position
+            const removeResponse = await fetch(`${BASE}/${SLUG}/api/attendance/${oldAttendanceId}`, {
+                method: 'DELETE'
+            });
+
+            if (!removeResponse.ok) {
+                throw new Error('Failed to remove from old position');
+            }
+
+            // Then assign to new position
+            const assignResponse = await fetch(`${BASE}/${SLUG}/api/attendance`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callout_id: state.callout.id,
+                    member_id: memberId,
+                    truck_id: newTruckId,
+                    position_id: newPositionId
+                })
+            });
+
+            const data = await assignResponse.json();
+
+            // Update from server response
+            if (data.attendance) {
+                state.callout.attendance = data.attendance;
+            }
+            if (data.available_members) {
+                state.availableMembers = data.available_members;
+            }
+
+            render();
+        } catch (error) {
+            console.error('Failed to move member:', error);
+            alert('Failed to move member. Please try again.');
+            await loadData();
+        } finally {
+            state.isProcessing = false;
+            if (state.callout && state.callout.status === 'active') {
+                connectSSE();
+            }
+        }
+    }
+
+    // Setup drag listeners
     function setupDragListeners() {
-        // Use event delegation on the available-members container
-        const container = elements.availableMembers;
-        if (!container) return;
+        // Available members - use event delegation
+        const availableContainer = elements.availableMembers;
+        if (availableContainer) {
+            // Mouse events
+            availableContainer.addEventListener('mousedown', function(e) {
+                const chip = e.target.closest('.member-chip');
+                if (!chip) return;
 
-        // Remove existing listeners by cloning (clean slate)
-        // Note: We use event delegation, so we set up once on the container
+                const memberId = parseInt(chip.dataset.memberId);
+                const member = state.availableMembers.find(m => m.id === memberId);
+                if (!member) return;
 
-        // Mouse events
-        container.addEventListener('mousedown', function(e) {
-            const chip = e.target.closest('.member-chip');
-            if (!chip) return;
+                handleDragStart(e, memberId, member.display_name || member.name, 'available');
+            });
 
-            const memberId = parseInt(chip.dataset.memberId);
-            const member = state.availableMembers.find(m => m.id === memberId);
-            if (!member) return;
+            // Touch events
+            availableContainer.addEventListener('touchstart', function(e) {
+                const chip = e.target.closest('.member-chip');
+                if (!chip) return;
 
-            handleDragStart(e, memberId, member.display_name || member.name);
-        });
+                const memberId = parseInt(chip.dataset.memberId);
+                const member = state.availableMembers.find(m => m.id === memberId);
+                if (!member) return;
 
-        // Touch events
-        container.addEventListener('touchstart', function(e) {
-            const chip = e.target.closest('.member-chip');
-            if (!chip) return;
+                handleDragStart(e, memberId, member.display_name || member.name, 'available');
+            }, { passive: true });
+        }
 
-            const memberId = parseInt(chip.dataset.memberId);
-            const member = state.availableMembers.find(m => m.id === memberId);
-            if (!member) return;
+        // Trucks container - for dragging from filled positions
+        const trucksContainer = elements.trucksContainer;
+        if (trucksContainer) {
+            // Mouse events
+            trucksContainer.addEventListener('mousedown', function(e) {
+                // Check if clicking on a filled position slot
+                const filledSlot = e.target.closest('.position-slot.filled');
+                if (filledSlot) {
+                    const attendanceId = filledSlot.dataset.attendanceId;
+                    const memberId = parseInt(filledSlot.dataset.memberId);
+                    const memberName = filledSlot.querySelector('.member-name')?.textContent || '';
 
-            handleDragStart(e, memberId, member.display_name || member.name);
-        }, { passive: true });
+                    if (attendanceId && memberId) {
+                        e.preventDefault();
+                        handleDragStart(e, memberId, memberName, 'position', parseInt(attendanceId));
+                    }
+                    return;
+                }
+
+                // Check if clicking on a standby member
+                const standbyMember = e.target.closest('.standby-member');
+                if (standbyMember) {
+                    const attendanceId = standbyMember.dataset.attendanceId;
+                    const memberId = parseInt(standbyMember.dataset.memberId);
+                    const memberName = standbyMember.querySelector('span:first-child')?.textContent || '';
+
+                    if (attendanceId && memberId) {
+                        e.preventDefault();
+                        handleDragStart(e, memberId, memberName, 'standby', parseInt(attendanceId));
+                    }
+                }
+            });
+
+            // Touch events
+            trucksContainer.addEventListener('touchstart', function(e) {
+                const filledSlot = e.target.closest('.position-slot.filled');
+                if (filledSlot) {
+                    const attendanceId = filledSlot.dataset.attendanceId;
+                    const memberId = parseInt(filledSlot.dataset.memberId);
+                    const memberName = filledSlot.querySelector('.member-name')?.textContent || '';
+
+                    if (attendanceId && memberId) {
+                        handleDragStart(e, memberId, memberName, 'position', parseInt(attendanceId));
+                    }
+                    return;
+                }
+
+                const standbyMember = e.target.closest('.standby-member');
+                if (standbyMember) {
+                    const attendanceId = standbyMember.dataset.attendanceId;
+                    const memberId = parseInt(standbyMember.dataset.memberId);
+                    const memberName = standbyMember.querySelector('span:first-child')?.textContent || '';
+
+                    if (attendanceId && memberId) {
+                        handleDragStart(e, memberId, memberName, 'standby', parseInt(attendanceId));
+                    }
+                }
+            }, { passive: true });
+        }
 
         // Global move and end listeners
         document.addEventListener('mousemove', handleDragMove);

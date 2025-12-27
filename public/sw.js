@@ -1,4 +1,4 @@
-const CACHE_NAME = 'brigade-attendance-v12';
+const CACHE_NAME = 'brigade-attendance-v13';
 // Note: Static assets are cached dynamically on first request
 // to support deployment in any subdirectory
 const CACHEABLE_EXTENSIONS = ['.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.woff', '.woff2'];
