@@ -15,8 +15,11 @@ ob_start();
     <table class="data-table" id="members-table">
         <thead>
             <tr>
-                <th>Name</th>
+                <th>Display Name</th>
                 <th>Rank</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -34,13 +37,28 @@ ob_start();
         <form id="member-form">
             <input type="hidden" id="member-id">
             <div class="form-group">
-                <label for="member-name">Name</label>
-                <input type="text" id="member-name" required>
+                <label for="member-display-name">Display Name *</label>
+                <input type="text" id="member-display-name" required>
+                <small class="form-help">e.g., SO John Smith, QFF Jane Doe</small>
             </div>
             <div class="form-group">
                 <label for="member-rank">Rank</label>
                 <input type="text" id="member-rank">
                 <small class="form-help">e.g., CFO, DCFO, SSO, SO, SFF, QFF, FF, RCFF</small>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="member-first-name">First Name</label>
+                    <input type="text" id="member-first-name">
+                </div>
+                <div class="form-group">
+                    <label for="member-last-name">Last Name</label>
+                    <input type="text" id="member-last-name">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="member-email">Email</label>
+                <input type="email" id="member-email">
             </div>
             <div class="form-group">
                 <label for="member-joindate">Join Date</label>
@@ -59,10 +77,10 @@ ob_start();
 <div id="import-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <h2>Import Members from CSV</h2>
-        <p>Format: name,rank (one per line)</p>
+        <p>Format: Display Name, Rank, First Name, Last Name, Email (one per line)</p>
         <form id="import-form">
             <div class="form-group">
-                <textarea id="import-csv" rows="10" placeholder="John Smith,Station Officer&#10;Jane Doe,Firefighter"></textarea>
+                <textarea id="import-csv" rows="10" placeholder="SO John Smith,SO,John,Smith,john@example.com&#10;QFF Jane Doe,QFF,Jane,Doe,jane@example.com"></textarea>
             </div>
             <div class="form-group">
                 <label>
@@ -76,6 +94,16 @@ ob_start();
         </form>
     </div>
 </div>
+
+<style>
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+.form-row .form-group {
+    flex: 1;
+}
+</style>
 
 <script>
 const SLUG = '<?= $slug ?>';
@@ -94,14 +122,20 @@ function renderMembers() {
     const search = document.getElementById('member-search').value.toLowerCase();
 
     const filtered = members.filter(m =>
-        m.name.toLowerCase().includes(search) ||
-        m.rank.toLowerCase().includes(search)
+        (m.display_name || '').toLowerCase().includes(search) ||
+        (m.rank || '').toLowerCase().includes(search) ||
+        (m.first_name || '').toLowerCase().includes(search) ||
+        (m.last_name || '').toLowerCase().includes(search) ||
+        (m.email || '').toLowerCase().includes(search)
     );
 
     tbody.innerHTML = filtered.map(m => `
         <tr class="${m.is_active ? '' : 'inactive'}">
-            <td>${escapeHtml(m.name)}</td>
-            <td>${escapeHtml(m.rank)}</td>
+            <td>${escapeHtml(m.display_name || '')}</td>
+            <td>${escapeHtml(m.rank || '')}</td>
+            <td>${escapeHtml(m.first_name || '')}</td>
+            <td>${escapeHtml(m.last_name || '')}</td>
+            <td>${escapeHtml(m.email || '')}</td>
             <td>${m.is_active ? '<span class="status-badge status-active">Active</span>' : '<span class="status-badge status-inactive">Inactive</span>'}</td>
             <td>
                 <button class="btn-small" onclick="editMember(${m.id})">Edit</button>
@@ -121,8 +155,11 @@ function filterMembers() {
 function showAddMemberModal() {
     document.getElementById('member-modal-title').textContent = 'Add Member';
     document.getElementById('member-id').value = '';
-    document.getElementById('member-name').value = '';
+    document.getElementById('member-display-name').value = '';
     document.getElementById('member-rank').value = '';
+    document.getElementById('member-first-name').value = '';
+    document.getElementById('member-last-name').value = '';
+    document.getElementById('member-email').value = '';
     document.getElementById('member-joindate').value = '';
     document.getElementById('member-modal').style.display = 'flex';
 }
@@ -133,8 +170,11 @@ function editMember(id) {
 
     document.getElementById('member-modal-title').textContent = 'Edit Member';
     document.getElementById('member-id').value = id;
-    document.getElementById('member-name').value = member.name;
-    document.getElementById('member-rank').value = member.rank;
+    document.getElementById('member-display-name').value = member.display_name || '';
+    document.getElementById('member-rank').value = member.rank || '';
+    document.getElementById('member-first-name').value = member.first_name || '';
+    document.getElementById('member-last-name').value = member.last_name || '';
+    document.getElementById('member-email').value = member.email || '';
     document.getElementById('member-joindate').value = member.join_date || '';
     document.getElementById('member-modal').style.display = 'flex';
 }
@@ -147,8 +187,11 @@ document.getElementById('member-form').addEventListener('submit', async function
     e.preventDefault();
 
     const id = document.getElementById('member-id').value;
-    const name = document.getElementById('member-name').value;
+    const displayName = document.getElementById('member-display-name').value;
     const rank = document.getElementById('member-rank').value;
+    const firstName = document.getElementById('member-first-name').value;
+    const lastName = document.getElementById('member-last-name').value;
+    const email = document.getElementById('member-email').value;
     const joinDate = document.getElementById('member-joindate').value;
 
     const url = id ? `${BASE}/${SLUG}/admin/api/members/${id}` : `${BASE}/${SLUG}/admin/api/members`;
@@ -157,7 +200,14 @@ document.getElementById('member-form').addEventListener('submit', async function
     await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, rank, join_date: joinDate || null })
+        body: JSON.stringify({
+            display_name: displayName,
+            rank,
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            join_date: joinDate || null
+        })
     });
 
     closeMemberModal();
@@ -210,6 +260,7 @@ document.getElementById('import-form').addEventListener('submit', async function
 });
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;

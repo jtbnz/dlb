@@ -90,12 +90,41 @@ class Database
             $this->pdo->exec("ALTER TABLE brigades ADD COLUMN member_order TEXT DEFAULT 'rank_name'");
         }
 
-        // Add join_date column to members if not exists
+        // Migrate members table to new structure
         $columns = $this->query("PRAGMA table_info(members)");
         $columnNames = array_column($columns, 'name');
 
+        // Add join_date column if not exists
         if (!in_array('join_date', $columnNames)) {
             $this->pdo->exec("ALTER TABLE members ADD COLUMN join_date DATE");
+        }
+
+        // Add new member columns if not exists
+        if (!in_array('display_name', $columnNames)) {
+            $this->pdo->exec("ALTER TABLE members ADD COLUMN display_name TEXT DEFAULT ''");
+            $this->pdo->exec("ALTER TABLE members ADD COLUMN first_name TEXT DEFAULT ''");
+            $this->pdo->exec("ALTER TABLE members ADD COLUMN last_name TEXT DEFAULT ''");
+            $this->pdo->exec("ALTER TABLE members ADD COLUMN email TEXT DEFAULT ''");
+
+            // Migrate existing data: use "rank name" as display_name, split name into first/last
+            $members = $this->query("SELECT id, name, rank FROM members");
+            foreach ($members as $member) {
+                $name = $member['name'];
+                $rank = $member['rank'];
+
+                // Create display_name as "rank name"
+                $displayName = trim($rank . ' ' . $name);
+
+                // Split name into first and last (assume first space separates them)
+                $nameParts = explode(' ', $name, 2);
+                $firstName = $nameParts[0] ?? '';
+                $lastName = $nameParts[1] ?? '';
+
+                $this->execute(
+                    "UPDATE members SET display_name = ?, first_name = ?, last_name = ? WHERE id = ?",
+                    [$displayName, $firstName, $lastName, $member['id']]
+                );
+            }
         }
     }
 
@@ -138,8 +167,11 @@ class Database
         CREATE TABLE IF NOT EXISTS members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             brigade_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
+            display_name TEXT NOT NULL,
             rank TEXT DEFAULT '',
+            first_name TEXT DEFAULT '',
+            last_name TEXT DEFAULT '',
+            email TEXT DEFAULT '',
             join_date DATE,
             is_active INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -278,23 +310,26 @@ class Database
 
         // Create demo members
         $members = [
-            ['name' => 'John Smith', 'rank' => 'Station Officer'],
-            ['name' => 'Sarah Jones', 'rank' => 'Senior Firefighter'],
-            ['name' => 'Mike Brown', 'rank' => 'Qualified Firefighter'],
-            ['name' => 'Emma Wilson', 'rank' => 'Qualified Firefighter'],
-            ['name' => 'David Clark', 'rank' => 'Firefighter'],
-            ['name' => 'Lisa Taylor', 'rank' => 'Firefighter'],
-            ['name' => 'James Anderson', 'rank' => 'Senior Firefighter'],
-            ['name' => 'Rachel White', 'rank' => 'Qualified Firefighter'],
-            ['name' => 'Tom Harris', 'rank' => 'Firefighter'],
-            ['name' => 'Amy Martin', 'rank' => 'Probationary Firefighter'],
+            ['display_name' => 'SO John Smith', 'rank' => 'SO', 'first_name' => 'John', 'last_name' => 'Smith', 'email' => 'john.smith@example.com'],
+            ['display_name' => 'SFF Sarah Jones', 'rank' => 'SFF', 'first_name' => 'Sarah', 'last_name' => 'Jones', 'email' => 'sarah.jones@example.com'],
+            ['display_name' => 'QFF Mike Brown', 'rank' => 'QFF', 'first_name' => 'Mike', 'last_name' => 'Brown', 'email' => 'mike.brown@example.com'],
+            ['display_name' => 'QFF Emma Wilson', 'rank' => 'QFF', 'first_name' => 'Emma', 'last_name' => 'Wilson', 'email' => 'emma.wilson@example.com'],
+            ['display_name' => 'FF David Clark', 'rank' => 'FF', 'first_name' => 'David', 'last_name' => 'Clark', 'email' => 'david.clark@example.com'],
+            ['display_name' => 'FF Lisa Taylor', 'rank' => 'FF', 'first_name' => 'Lisa', 'last_name' => 'Taylor', 'email' => 'lisa.taylor@example.com'],
+            ['display_name' => 'SFF James Anderson', 'rank' => 'SFF', 'first_name' => 'James', 'last_name' => 'Anderson', 'email' => 'james.anderson@example.com'],
+            ['display_name' => 'QFF Rachel White', 'rank' => 'QFF', 'first_name' => 'Rachel', 'last_name' => 'White', 'email' => 'rachel.white@example.com'],
+            ['display_name' => 'FF Tom Harris', 'rank' => 'FF', 'first_name' => 'Tom', 'last_name' => 'Harris', 'email' => 'tom.harris@example.com'],
+            ['display_name' => 'RCFF Amy Martin', 'rank' => 'RCFF', 'first_name' => 'Amy', 'last_name' => 'Martin', 'email' => 'amy.martin@example.com'],
         ];
 
         foreach ($members as $member) {
             $this->insert('members', [
                 'brigade_id' => $brigadeId,
-                'name' => $member['name'],
+                'display_name' => $member['display_name'],
                 'rank' => $member['rank'],
+                'first_name' => $member['first_name'],
+                'last_name' => $member['last_name'],
+                'email' => $member['email'],
                 'is_active' => 1,
             ]);
         }

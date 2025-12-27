@@ -28,7 +28,7 @@ class Member
         if ($activeOnly) {
             $sql .= " AND is_active = 1";
         }
-        $sql .= " ORDER BY name";
+        $sql .= " ORDER BY display_name";
 
         return db()->query($sql, [$brigadeId]);
     }
@@ -65,24 +65,24 @@ class Member
                     $dateA = $a['join_date'] ?? null;
                     $dateB = $b['join_date'] ?? null;
                     if ($dateA === null && $dateB === null) {
-                        return strcasecmp($a['name'], $b['name']);
+                        return strcasecmp($a['display_name'] ?? '', $b['display_name'] ?? '');
                     }
                     if ($dateA === null) return 1;
                     if ($dateB === null) return -1;
                     return strcmp($dateA, $dateB);
 
                 case 'alphabetical':
-                    return strcasecmp($a['name'], $b['name']);
+                    return strcasecmp($a['display_name'] ?? '', $b['display_name'] ?? '');
 
                 case 'rank_name':
                 default:
-                    // First by rank, then by name
+                    // First by rank, then by display_name
                     $rankA = self::getRankOrder($a['rank'] ?? '');
                     $rankB = self::getRankOrder($b['rank'] ?? '');
                     if ($rankA !== $rankB) {
                         return $rankA - $rankB;
                     }
-                    return strcasecmp($a['name'], $b['name']);
+                    return strcasecmp($a['display_name'] ?? '', $b['display_name'] ?? '');
             }
         });
 
@@ -156,6 +156,10 @@ class Member
         return self::update($id, ['is_active' => 1]);
     }
 
+    /**
+     * Import members from CSV
+     * Format: Display Name, Rank, First Name, Last Name, Email
+     */
     public static function importCsv(int $brigadeId, string $csvContent, bool $updateExisting = false): array
     {
         $lines = array_filter(array_map('trim', explode("\n", $csvContent)));
@@ -166,7 +170,7 @@ class Member
 
         foreach ($lines as $lineNum => $line) {
             // Skip header row if present
-            if ($lineNum === 0 && (stripos($line, 'name') !== false || stripos($line, 'rank') !== false)) {
+            if ($lineNum === 0 && (stripos($line, 'display') !== false || stripos($line, 'name') !== false || stripos($line, 'rank') !== false)) {
                 continue;
             }
 
@@ -176,22 +180,28 @@ class Member
                 continue;
             }
 
-            $name = trim($parts[0]);
+            // CSV format: Display Name, Rank, First Name, Last Name, Email
+            $displayName = trim($parts[0]);
             $rank = isset($parts[1]) ? trim($parts[1]) : '';
-            $joinDate = isset($parts[2]) ? self::parseDate(trim($parts[2])) : null;
+            $firstName = isset($parts[2]) ? trim($parts[2]) : '';
+            $lastName = isset($parts[3]) ? trim($parts[3]) : '';
+            $email = isset($parts[4]) ? trim($parts[4]) : '';
 
-            // Check if member exists
+            // Check if member exists by display_name
             $existing = db()->queryOne(
-                "SELECT id FROM members WHERE brigade_id = ? AND name = ?",
-                [$brigadeId, $name]
+                "SELECT id FROM members WHERE brigade_id = ? AND display_name = ?",
+                [$brigadeId, $displayName]
             );
 
             if ($existing) {
                 if ($updateExisting) {
-                    $updateData = ['rank' => $rank, 'is_active' => 1];
-                    if ($joinDate !== null) {
-                        $updateData['join_date'] = $joinDate;
-                    }
+                    $updateData = [
+                        'rank' => $rank,
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'email' => $email,
+                        'is_active' => 1,
+                    ];
                     self::update($existing['id'], $updateData);
                     $updated++;
                 } else {
@@ -200,13 +210,13 @@ class Member
             } else {
                 $memberData = [
                     'brigade_id' => $brigadeId,
-                    'name' => $name,
+                    'display_name' => $displayName,
                     'rank' => $rank,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
                     'is_active' => 1,
                 ];
-                if ($joinDate !== null) {
-                    $memberData['join_date'] = $joinDate;
-                }
                 self::create($memberData);
                 $imported++;
             }

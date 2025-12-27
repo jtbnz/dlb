@@ -162,8 +162,11 @@ class AdminController
 
         $memberData = [
             'brigade_id' => $brigade['id'],
-            'name' => trim($data['name'] ?? ''),
+            'display_name' => trim($data['display_name'] ?? ''),
             'rank' => trim($data['rank'] ?? ''),
+            'first_name' => trim($data['first_name'] ?? ''),
+            'last_name' => trim($data['last_name'] ?? ''),
+            'email' => trim($data['email'] ?? ''),
             'is_active' => 1,
         ];
 
@@ -173,7 +176,7 @@ class AdminController
 
         $id = Member::create($memberData);
 
-        audit_log($brigade['id'], null, 'member_created', ['member_id' => $id, 'name' => $data['name']]);
+        audit_log($brigade['id'], null, 'member_created', ['member_id' => $id, 'display_name' => $data['display_name']]);
         json_response(['success' => true, 'id' => $id]);
     }
 
@@ -189,8 +192,11 @@ class AdminController
         }
 
         $updateData = [
-            'name' => trim($data['name'] ?? $member['name']),
+            'display_name' => trim($data['display_name'] ?? $member['display_name']),
             'rank' => trim($data['rank'] ?? $member['rank']),
+            'first_name' => trim($data['first_name'] ?? $member['first_name']),
+            'last_name' => trim($data['last_name'] ?? $member['last_name']),
+            'email' => trim($data['email'] ?? $member['email']),
             'is_active' => $data['is_active'] ?? $member['is_active'],
         ];
 
@@ -215,7 +221,7 @@ class AdminController
         }
 
         Member::deactivate((int)$memberId);
-        audit_log($brigade['id'], null, 'member_deactivated', ['member_id' => $memberId, 'name' => $member['name']]);
+        audit_log($brigade['id'], null, 'member_deactivated', ['member_id' => $memberId, 'display_name' => $member['display_name']]);
         json_response(['success' => true]);
     }
 

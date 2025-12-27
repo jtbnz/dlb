@@ -12,14 +12,14 @@ class Attendance
     public static function findByCallout(int $calloutId): array
     {
         return db()->query(
-            "SELECT a.*, m.name as member_name, m.rank as member_rank,
+            "SELECT a.*, m.display_name as member_name, m.rank as member_rank,
                     t.name as truck_name, t.is_station, p.name as position_name, p.allow_multiple
              FROM attendance a
              JOIN members m ON a.member_id = m.id
              JOIN trucks t ON a.truck_id = t.id
              JOIN positions p ON a.position_id = p.id
              WHERE a.callout_id = ?
-             ORDER BY t.sort_order, p.sort_order, m.name",
+             ORDER BY t.sort_order, p.sort_order, m.display_name",
             [$calloutId]
         );
     }

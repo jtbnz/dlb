@@ -505,8 +505,7 @@
             <div class="member-chip ${state.selectedMember === member.id ? 'selected' : ''}"
                  data-member-id="${member.id}"
                  onclick="selectMember(${member.id})">
-                <span class="name">${escapeHtml(member.name)}</span>
-                <span class="rank">${escapeHtml(member.rank)}</span>
+                <span class="name">${escapeHtml(member.display_name || member.name)}</span>
             </div>
         `).join('') || '<p class="no-data">All members assigned</p>';
     }
@@ -550,7 +549,7 @@
 
         // Get member info for optimistic update
         const member = state.availableMembers.find(m => m.id === memberId);
-        const memberName = member ? member.name : 'Assigning...';
+        const memberName = member ? (member.display_name || member.name) : 'Assigning...';
 
         // Optimistic UI update - immediately show assignment
         state.availableMembers = state.availableMembers.filter(m => m.id !== memberId);
