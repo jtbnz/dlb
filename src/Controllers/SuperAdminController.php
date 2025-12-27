@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\Brigade;
 use App\Middleware\SuperAdminAuth;
+use App\Services\FenzFetcher;
 
 class SuperAdminController
 {
@@ -278,5 +279,76 @@ class SuperAdminController
     {
         $identifier = $prefix . '_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         db()->delete('rate_limits', 'identifier = ?', [$identifier]);
+    }
+
+    public function fenzStatus(): void
+    {
+        SuperAdminAuth::requireAuth();
+
+        echo view('superadmin/fenz-status', []);
+    }
+
+    public function apiFenzStatus(): void
+    {
+        SuperAdminAuth::requireAuth();
+
+        $logs = FenzFetcher::getRecentLogs(200);
+        $fetchStatus = FenzFetcher::getFetchStatus();
+
+        // Get brigades with pending FENZ fetches
+        $pendingBrigades = db()->query(
+            "SELECT DISTINCT b.id, b.name, b.region, COUNT(c.id) as pending_count
+             FROM brigades b
+             INNER JOIN callouts c ON c.brigade_id = b.id
+             WHERE c.fenz_fetched_at IS NULL
+               AND c.status = 'submitted'
+               AND c.created_at >= datetime('now', '-7 days')
+               AND c.icad_number LIKE 'F%'
+             GROUP BY b.id"
+        );
+
+        json_response([
+            'logs' => $logs,
+            'fetch_status' => $fetchStatus,
+            'pending_brigades' => $pendingBrigades,
+            'current_nz_time' => (new \DateTime('now', new \DateTimeZone('Pacific/Auckland')))->format('Y-m-d H:i:s T'),
+            'current_nz_day' => FenzFetcher::getNzDayName(),
+        ]);
+    }
+
+    public function apiFenzTrigger(): void
+    {
+        SuperAdminAuth::requireAuth();
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $brigadeId = (int)($data['brigade_id'] ?? 0);
+
+        if ($brigadeId === 0) {
+            // Trigger for all brigades
+            $results = FenzFetcher::updateAllBrigades();
+            json_response(['success' => true, 'results' => $results]);
+        } else {
+            // Trigger for specific brigade
+            $brigade = Brigade::findById($brigadeId);
+            if (!$brigade) {
+                json_response(['error' => 'Brigade not found'], 404);
+                return;
+            }
+
+            // Clear rate limit for this brigade to force fetch
+            $lockFile = __DIR__ . '/../../data/fenz_cache/brigade_' . $brigadeId . '.lock';
+            if (file_exists($lockFile)) {
+                unlink($lockFile);
+            }
+
+            $region = $brigade['region'] ?? 1;
+            $updated = FenzFetcher::updateIfNeeded($brigadeId, $region);
+
+            json_response([
+                'success' => true,
+                'brigade_id' => $brigadeId,
+                'updated' => $updated,
+            ]);
+        }
     }
 }

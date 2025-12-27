@@ -451,10 +451,21 @@ class AttendanceController
         // Get recent callouts (last 30 days)
         $callouts = Callout::findRecentByBrigade($brigade['id'], 30);
 
-        // Enrich with attendance counts
+        // Enrich with attendance counts per truck
         foreach ($callouts as &$callout) {
             $attendance = Attendance::findByCallout($callout['id']);
             $callout['crew_count'] = count($attendance);
+
+            // Group by truck for per-truck counts
+            $truckCounts = [];
+            foreach ($attendance as $a) {
+                $truckName = $a['truck_name'] ?? 'Unknown';
+                if (!isset($truckCounts[$truckName])) {
+                    $truckCounts[$truckName] = 0;
+                }
+                $truckCounts[$truckName]++;
+            }
+            $callout['truck_crews'] = $truckCounts;
         }
 
         json_response([

@@ -73,6 +73,15 @@ function formatNZDate(dateString) {
     };
 }
 
+function renderTruckBadges(truckCrews) {
+    if (!truckCrews || Object.keys(truckCrews).length === 0) {
+        return '<span class="truck-badge">0 crew</span>';
+    }
+    return Object.entries(truckCrews)
+        .map(([truck, count]) => `<span class="truck-badge">\${escapeHtml(truck)}: \${count}</span>`)
+        .join('');
+}
+
 function renderCallouts(callouts) {
     const container = document.getElementById('callouts-list');
 
@@ -87,7 +96,7 @@ function renderCallouts(callouts) {
             <div class="callout-card" onclick="viewCallout(\${c.id})">
                 <div class="callout-header">
                     <span class="icad-number">\${escapeHtml(c.icad_number)}</span>
-                    <span class="crew-count">\${c.crew_count} crew</span>
+                    <div class="truck-badges">\${renderTruckBadges(c.truck_crews)}</div>
                 </div>
                 <div class="callout-meta">
                     <span class="date">\${dateStr}</span>

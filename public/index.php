@@ -58,6 +58,9 @@ $routes = [
     ['POST', '/admin/api/brigades', 'SuperAdminController@apiCreateBrigade'],
     ['PUT', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiUpdateBrigade'],
     ['DELETE', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiDeleteBrigade'],
+    ['GET', '/admin/fenz-status', 'SuperAdminController@fenzStatus'],
+    ['GET', '/admin/api/fenz-status', 'SuperAdminController@apiFenzStatus'],
+    ['POST', '/admin/api/fenz-trigger', 'SuperAdminController@apiFenzTrigger'],
 
     // Attendance entry (PIN required) - must come before catch-all brigade route
     ['GET', '/([a-z0-9-]+)/attendance', 'AttendanceController@index'],

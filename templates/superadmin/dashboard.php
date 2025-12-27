@@ -5,6 +5,7 @@ $content = <<<HTML
     <header class="admin-header">
         <h1>System Administration</h1>
         <div class="header-actions">
+            <a href="{$basePath}/admin/fenz-status" class="btn btn-secondary">FENZ Status</a>
             <a href="{$basePath}/admin/logout" class="btn btn-secondary">Logout</a>
         </div>
     </header>

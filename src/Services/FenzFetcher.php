@@ -8,7 +8,75 @@ class FenzFetcher
 {
     private const FENZ_URL = 'https://www.fireandemergency.nz/mi_NZ/incidents-and-news/incident-reports/incidents/';
     private const CACHE_DIR = __DIR__ . '/../../data/fenz_cache/';
+    private const LOG_FILE = __DIR__ . '/../../data/fenz_fetch.log';
     private const FETCH_COOLDOWN = 3600; // 1 hour between fetches per brigade
+
+    /**
+     * Log a message to the FENZ fetch log
+     */
+    private static function log(string $message): void
+    {
+        $logDir = dirname(self::LOG_FILE);
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+
+        $nzTimezone = new \DateTimeZone('Pacific/Auckland');
+        $now = new \DateTime('now', $nzTimezone);
+        $timestamp = $now->format('Y-m-d H:i:s T');
+
+        $logLine = "[{$timestamp}] {$message}\n";
+        file_put_contents(self::LOG_FILE, $logLine, FILE_APPEND | LOCK_EX);
+
+        // Keep log file under 100KB by trimming old entries
+        if (file_exists(self::LOG_FILE) && filesize(self::LOG_FILE) > 100000) {
+            $lines = file(self::LOG_FILE);
+            $lines = array_slice($lines, -500); // Keep last 500 lines
+            file_put_contents(self::LOG_FILE, implode('', $lines));
+        }
+    }
+
+    /**
+     * Get recent log entries
+     */
+    public static function getRecentLogs(int $lines = 100): array
+    {
+        if (!file_exists(self::LOG_FILE)) {
+            return [];
+        }
+
+        $allLines = file(self::LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        return array_slice($allLines, -$lines);
+    }
+
+    /**
+     * Get fetch status for all brigades
+     */
+    public static function getFetchStatus(): array
+    {
+        $status = [];
+
+        if (!is_dir(self::CACHE_DIR)) {
+            return $status;
+        }
+
+        $lockFiles = glob(self::CACHE_DIR . 'brigade_*.lock');
+        foreach ($lockFiles as $lockFile) {
+            preg_match('/brigade_(\d+)\.lock$/', $lockFile, $matches);
+            if ($matches) {
+                $brigadeId = (int)$matches[1];
+                $lastFetch = (int)file_get_contents($lockFile);
+                $status[$brigadeId] = [
+                    'last_fetch' => $lastFetch,
+                    'last_fetch_formatted' => date('Y-m-d H:i:s', $lastFetch),
+                    'next_fetch_available' => $lastFetch + self::FETCH_COOLDOWN,
+                    'can_fetch_now' => time() >= $lastFetch + self::FETCH_COOLDOWN,
+                ];
+            }
+        }
+
+        return $status;
+    }
 
     /**
      * Get the current day name in NZ timezone
@@ -83,6 +151,8 @@ class FenzFetcher
     {
         $url = self::FENZ_URL . '?region=' . $region . '&day=' . urlencode($day);
 
+        self::log("Fetching FENZ data: region={$region}, day={$day}");
+
         $context = stream_context_create([
             'http' => [
                 'timeout' => 10,
@@ -93,11 +163,14 @@ class FenzFetcher
         $html = @file_get_contents($url, false, $context);
 
         if ($html === false) {
-            error_log("FenzFetcher: Failed to fetch {$url}");
+            self::log("ERROR: Failed to fetch {$url}");
             return [];
         }
 
-        return self::parseIncidents($html);
+        $incidents = self::parseIncidents($html);
+        self::log("Parsed " . count($incidents) . " incidents from {$day}");
+
+        return $incidents;
     }
 
     /**
@@ -180,8 +253,11 @@ class FenzFetcher
      */
     public static function updateIfNeeded(int $brigadeId, int $region = 1): int
     {
+        self::log("updateIfNeeded called for brigade {$brigadeId}, region {$region}");
+
         // Check rate limit
         if (!self::shouldFetch($brigadeId)) {
+            self::log("Brigade {$brigadeId}: Rate limited, skipping fetch");
             return 0;
         }
 
@@ -192,6 +268,7 @@ class FenzFetcher
         $unfetched = Callout::findUnfetchedByBrigade($brigadeId);
 
         if (empty($unfetched)) {
+            self::log("Brigade {$brigadeId}: No unfetched callouts found");
             return 0;
         }
 
@@ -201,18 +278,23 @@ class FenzFetcher
             $icadNumbers[$callout['icad_number']] = $callout['id'];
         }
 
-        // Fetch today's incidents
-        $day = self::getNzDayName();
-        $incidents = self::fetchIncidentData($region, $day);
+        self::log("Brigade {$brigadeId}: Looking for " . count($icadNumbers) . " ICAD numbers: " . implode(', ', array_keys($icadNumbers)));
 
-        // Also fetch yesterday if early morning
-        if (self::isNzEarlyMorning()) {
-            $yesterdayIncidents = self::fetchIncidentData($region, self::getNzYesterdayName());
-            $incidents = array_merge($yesterdayIncidents, $incidents);
+        // Fetch all 7 days to ensure we catch older callouts
+        // FENZ website only shows incidents by day name (Monday, Tuesday, etc.)
+        $allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        $incidents = [];
+
+        foreach ($allDays as $day) {
+            $dayIncidents = self::fetchIncidentData($region, $day);
+            $incidents = array_merge($incidents, $dayIncidents);
         }
+
+        self::log("Brigade {$brigadeId}: Total incidents fetched across all days: " . count($incidents));
 
         // Match and update callouts
         $updated = 0;
+        $notFound = [];
         foreach ($icadNumbers as $icadNumber => $calloutId) {
             if (isset($incidents[$icadNumber])) {
                 $incident = $incidents[$icadNumber];
@@ -223,8 +305,17 @@ class FenzFetcher
                     $incident['call_type']
                 );
                 $updated++;
+                self::log("Brigade {$brigadeId}: Updated callout {$calloutId} with ICAD {$icadNumber}");
+            } else {
+                $notFound[] = $icadNumber;
             }
         }
+
+        if (!empty($notFound)) {
+            self::log("Brigade {$brigadeId}: Could not find ICAD numbers: " . implode(', ', $notFound));
+        }
+
+        self::log("Brigade {$brigadeId}: Completed - updated {$updated} callouts");
 
         return $updated;
     }
