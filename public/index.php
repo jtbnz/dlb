@@ -76,6 +76,9 @@ $routes = [
     ['POST', '/([a-z0-9-]+)/api/attendance', 'AttendanceController@addAttendance'],
     ['DELETE', '/([a-z0-9-]+)/api/attendance/([0-9]+)', 'AttendanceController@removeAttendance'],
     ['GET', '/([a-z0-9-]+)/api/sse/callout/([0-9]+)', 'SSEController@stream'],
+    ['GET', '/([a-z0-9-]+)/history', 'AttendanceController@history'],
+    ['GET', '/([a-z0-9-]+)/api/history', 'AttendanceController@apiGetHistory'],
+    ['GET', '/([a-z0-9-]+)/api/history/([0-9]+)', 'AttendanceController@apiGetHistoryDetail'],
 
     // Admin routes
     ['GET', '/([a-z0-9-]+)/admin', 'AdminController@showLogin'],

@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Models\Truck;
 use App\Middleware\PinAuth;
 use App\Services\EmailService;
+use App\Services\FenzFetcher;
 
 class AttendanceController
 {
@@ -427,5 +428,56 @@ class AttendanceController
             'timestamp' => microtime(true),
             'callout_id' => $calloutId,
         ]));
+    }
+
+    public function history(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        echo view('attendance/history', [
+            'brigade' => $brigade,
+            'slug' => $slug,
+        ]);
+    }
+
+    public function apiGetHistory(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        // Trigger lazy FENZ data fetch if needed
+        $region = $brigade['region'] ?? 1;
+        FenzFetcher::updateIfNeeded($brigade['id'], $region);
+
+        // Get recent callouts (last 30 days)
+        $callouts = Callout::findRecentByBrigade($brigade['id'], 30);
+
+        // Enrich with attendance counts
+        foreach ($callouts as &$callout) {
+            $attendance = Attendance::findByCallout($callout['id']);
+            $callout['crew_count'] = count($attendance);
+        }
+
+        json_response([
+            'callouts' => $callouts,
+        ]);
+    }
+
+    public function apiGetHistoryDetail(string $slug, string $calloutId): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        // Get grouped attendance
+        $callout['attendance_grouped'] = Attendance::findByCalloutGrouped((int)$calloutId);
+
+        json_response([
+            'callout' => $callout,
+        ]);
     }
 }

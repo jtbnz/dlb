@@ -126,6 +126,31 @@ class Database
                 );
             }
         }
+
+        // Add region column to brigades if not exists
+        $brigadeColumns = $this->query("PRAGMA table_info(brigades)");
+        $brigadeColumnNames = array_column($brigadeColumns, 'name');
+
+        if (!in_array('region', $brigadeColumnNames)) {
+            $this->pdo->exec("ALTER TABLE brigades ADD COLUMN region INTEGER DEFAULT 1");
+        }
+
+        // Add FENZ incident columns to callouts if not exists
+        $calloutColumns = $this->query("PRAGMA table_info(callouts)");
+        $calloutColumnNames = array_column($calloutColumns, 'name');
+
+        if (!in_array('location', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN location TEXT");
+        }
+        if (!in_array('duration', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN duration TEXT");
+        }
+        if (!in_array('call_type', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN call_type TEXT");
+        }
+        if (!in_array('fenz_fetched_at', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN fenz_fetched_at DATETIME");
+        }
     }
 
     public function initializeSchema(): void
@@ -141,6 +166,7 @@ class Database
             email_recipients TEXT DEFAULT '[]',
             include_non_attendees INTEGER DEFAULT 0,
             member_order TEXT DEFAULT 'rank_name',
+            region INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
@@ -184,6 +210,10 @@ class Database
             brigade_id INTEGER NOT NULL,
             icad_number TEXT NOT NULL,
             status TEXT DEFAULT 'active',
+            location TEXT,
+            duration TEXT,
+            call_type TEXT,
+            fenz_fetched_at DATETIME,
             submitted_at DATETIME,
             submitted_by TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

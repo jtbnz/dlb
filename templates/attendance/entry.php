@@ -31,6 +31,9 @@ $content = <<<HTML
             <button type="submit" class="btn btn-primary">Start Callout</button>
         </form>
         <p id="callouts-this-year" class="callouts-count"></p>
+        <div class="recent-callouts-link">
+            <a href="{$_ENV['BASE_PATH']}/{$slug}/history">Browse Recent Callouts</a>
+        </div>
     </div>
 
     <div id="attendance-area" class="attendance-area" style="display:none;">

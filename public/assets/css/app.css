@@ -1195,3 +1195,195 @@ input:focus, select:focus, textarea:focus {
         max-width: 100%;
     }
 }
+
+/* ===== Recent Callouts Link ===== */
+.recent-callouts-link {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.recent-callouts-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+.recent-callouts-link a:hover {
+    text-decoration: underline;
+}
+
+/* ===== History Page ===== */
+.history-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.history-header {
+    margin-bottom: 2rem;
+}
+
+.history-header .back-link {
+    color: var(--gray-600);
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.history-header .back-link:hover {
+    color: var(--primary);
+}
+
+.history-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.history-header .subtitle {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+}
+
+.callouts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.callout-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.callout-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.callout-card .callout-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.callout-card .icad-number {
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--gray-900);
+}
+
+.callout-card .crew-count {
+    background: var(--primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.callout-card .callout-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+}
+
+.callout-card .call-type {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    margin-bottom: 0.25rem;
+}
+
+.callout-card .location {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.no-callouts {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-600);
+}
+
+/* History Modal */
+.history-page .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.history-page .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray-600);
+    padding: 0;
+    line-height: 1;
+}
+
+.history-page .modal-close:hover {
+    color: var(--gray-900);
+}
+
+.history-page .modal-body {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.callout-detail-header {
+    margin-bottom: 1rem;
+}
+
+.callout-detail-header p {
+    margin-bottom: 0.5rem;
+}
+
+.sitrep-link {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.sitrep-link:hover {
+    text-decoration: underline;
+}
+
+.history-page .attendance-truck {
+    margin-bottom: 1.5rem;
+}
+
+.history-page .attendance-truck h4 {
+    font-size: 1rem;
+    background: var(--gray-100);
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius);
+}
+
+.history-page .attendance-row {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.history-page .attendance-position {
+    font-weight: 500;
+    color: var(--gray-600);
+    min-width: 80px;
+}
+
+.history-page .attendance-member {
+    color: var(--gray-900);
+}

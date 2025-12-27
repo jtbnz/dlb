@@ -48,6 +48,18 @@ ob_start();
     </div>
 
     <div class="settings-section">
+        <h2>FENZ Region</h2>
+        <form id="region-form">
+            <div class="form-group">
+                <label for="region">Region Number</label>
+                <input type="number" id="region" min="1" max="99" value="1">
+                <small class="form-help">FENZ region number for incident data lookup. Default is 1.</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+
+    <div class="settings-section">
         <h2>Security</h2>
 
         <h3>Change Member PIN</h3>
@@ -110,6 +122,7 @@ async function loadSettings() {
     emailRecipients = data.email_recipients || [];
     document.getElementById('include-non-attendees').checked = data.include_non_attendees;
     document.getElementById('member-order').value = data.member_order || 'rank_name';
+    document.getElementById('region').value = data.region || 1;
 
     renderEmails();
     loadQRCode();
@@ -187,6 +200,20 @@ document.getElementById('member-order-form').addEventListener('submit', async fu
 
     if (response.ok) {
         alert('Member order saved');
+    }
+});
+
+document.getElementById('region-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const response = await fetch(`${BASE}/${SLUG}/admin/api/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ region: parseInt(document.getElementById('region').value) || 1 })
+    });
+
+    if (response.ok) {
+        alert('Region saved');
     }
 });
 

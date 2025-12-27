@@ -782,6 +782,7 @@ class AdminController
             'email_recipients' => json_decode($brigade['email_recipients'], true) ?? [],
             'include_non_attendees' => (bool)$brigade['include_non_attendees'],
             'member_order' => $brigade['member_order'] ?? 'rank_name',
+            'region' => $brigade['region'] ?? 1,
         ]);
     }
 
@@ -806,6 +807,13 @@ class AdminController
 
         if (isset($data['member_order']) && in_array($data['member_order'], ['rank_name', 'rank_joindate', 'alphabetical'])) {
             $updates['member_order'] = $data['member_order'];
+        }
+
+        if (isset($data['region'])) {
+            $region = (int)$data['region'];
+            if ($region >= 1 && $region <= 99) {
+                $updates['region'] = $region;
+            }
         }
 
         if (!empty($updates)) {
