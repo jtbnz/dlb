@@ -6,7 +6,7 @@ use App\Models\Callout;
 
 class FenzFetcher
 {
-    private const FENZ_URL = 'https://www.fireandemergency.nz/mi_NZ/incidents-and-news/incident-reports/incidents/';
+    private const FENZ_URL = 'https://www.fireandemergency.nz/incidents-and-news/incident-reports/incidents/';
     private const CACHE_DIR = __DIR__ . '/../../data/fenz_cache/';
     private const LOG_FILE = __DIR__ . '/../../data/fenz_fetch.log';
     private const FETCH_COOLDOWN = 3600; // 1 hour between fetches per brigade
