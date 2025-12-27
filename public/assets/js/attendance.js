@@ -79,6 +79,9 @@
     async function handleNewCallout(e) {
         e.preventDefault();
         const icadNumber = document.getElementById('new-icad').value.trim();
+        const callDateTime = document.getElementById('new-datetime').value;
+        const location = document.getElementById('new-location').value.trim();
+        const callType = document.getElementById('new-call-type').value.trim();
 
         if (!icadNumber) {
             alert('Please enter an ICAD number');
@@ -89,7 +92,12 @@
             const response = await fetch(`${BASE}/${SLUG}/api/callout`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ icad_number: icadNumber })
+                body: JSON.stringify({
+                    icad_number: icadNumber,
+                    call_datetime: callDateTime,
+                    location: location,
+                    call_type: callType
+                })
             });
 
             const data = await response.json();
@@ -372,6 +380,20 @@
         elements.loading.style.display = 'none';
         elements.noCallout.style.display = 'block';
         elements.attendanceArea.style.display = 'none';
+
+        // Pre-populate date/time with current NZ time
+        const datetimeInput = document.getElementById('new-datetime');
+        if (datetimeInput && !datetimeInput.value) {
+            // Get current time in NZ timezone and format for datetime-local input
+            const now = new Date();
+            const nzTime = new Date(now.toLocaleString('en-US', { timeZone: 'Pacific/Auckland' }));
+            const year = nzTime.getFullYear();
+            const month = String(nzTime.getMonth() + 1).padStart(2, '0');
+            const day = String(nzTime.getDate()).padStart(2, '0');
+            const hours = String(nzTime.getHours()).padStart(2, '0');
+            const minutes = String(nzTime.getMinutes()).padStart(2, '0');
+            datetimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
 
         // Display callouts this year count
         const countElement = document.getElementById('callouts-this-year');

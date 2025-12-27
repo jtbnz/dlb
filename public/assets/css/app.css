@@ -393,13 +393,41 @@ input:focus, select:focus, textarea:focus {
 
 .no-callout form {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    max-width: 400px;
+    max-width: 600px;
     margin: 0 auto;
 }
 
-.no-callout input {
+.no-callout .form-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.no-callout .form-row input {
     flex: 1;
+    min-width: 0;
+}
+
+.no-callout input {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    font-size: 1rem;
+}
+
+.no-callout input[type="datetime-local"] {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+@media (max-width: 600px) {
+    .no-callout .form-row {
+        flex-direction: column;
+    }
+    .no-callout input[type="datetime-local"] {
+        width: 100%;
+    }
 }
 
 .callouts-count {

@@ -9,7 +9,6 @@ use App\Models\Member;
 use App\Models\Truck;
 use App\Middleware\PinAuth;
 use App\Services\EmailService;
-use App\Services\FenzFetcher;
 
 class AttendanceController
 {
@@ -50,6 +49,9 @@ class AttendanceController
 
         $data = json_decode(file_get_contents('php://input'), true);
         $icadNumber = trim($data['icad_number'] ?? '');
+        $location = trim($data['location'] ?? '');
+        $callType = trim($data['call_type'] ?? '');
+        $callDateTime = trim($data['call_datetime'] ?? '');
 
         if (empty($icadNumber)) {
             json_response(['error' => 'ICAD number is required'], 400);
@@ -97,13 +99,32 @@ class AttendanceController
             }
         }
 
-        $calloutId = Callout::create([
+        // Build callout data
+        $calloutData = [
             'brigade_id' => $brigade['id'],
             'icad_number' => $icadNumber,
             'status' => 'active',
-        ]);
+        ];
 
-        audit_log($brigade['id'], $calloutId, 'callout_created', ['icad_number' => $icadNumber]);
+        // Add optional fields if provided
+        if (!empty($location)) {
+            $calloutData['location'] = $location;
+        }
+        if (!empty($callType)) {
+            $calloutData['call_type'] = $callType;
+        }
+        if (!empty($callDateTime)) {
+            // Convert datetime-local format (YYYY-MM-DDTHH:MM) to database format
+            $calloutData['created_at'] = str_replace('T', ' ', $callDateTime) . ':00';
+        }
+
+        $calloutId = Callout::create($calloutData);
+
+        audit_log($brigade['id'], $calloutId, 'callout_created', [
+            'icad_number' => $icadNumber,
+            'location' => $location,
+            'call_type' => $callType,
+        ]);
 
         $callout = Callout::findById($calloutId);
         $callout['attendance'] = [];
@@ -443,10 +464,6 @@ class AttendanceController
     public function apiGetHistory(string $slug): void
     {
         $brigade = PinAuth::requireAuth($slug);
-
-        // Trigger lazy FENZ data fetch if needed
-        $region = $brigade['region'] ?? 1;
-        FenzFetcher::updateIfNeeded($brigade['id'], $region);
 
         // Get recent callouts (last 30 days)
         $callouts = Callout::findRecentByBrigade($brigade['id'], 30);

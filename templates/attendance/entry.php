@@ -27,7 +27,14 @@ $content = <<<HTML
     <div id="no-callout" class="no-callout" style="display:none;">
         <h2>Start New Callout</h2>
         <form id="new-callout-form">
-            <input type="text" id="new-icad" placeholder="Enter ICAD Number (e.g., F4363832)" required>
+            <div class="form-row">
+                <input type="text" id="new-icad" placeholder="ICAD Number (e.g., F4363832)" required>
+                <input type="datetime-local" id="new-datetime" required>
+            </div>
+            <div class="form-row">
+                <input type="text" id="new-location" placeholder="Address / Location">
+                <input type="text" id="new-call-type" placeholder="Call Type (e.g., Structure Fire)">
+            </div>
             <button type="submit" class="btn btn-primary">Start Callout</button>
         </form>
         <p id="callouts-this-year" class="callouts-count"></p>
