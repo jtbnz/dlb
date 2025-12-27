@@ -30,6 +30,7 @@ $content = <<<HTML
             <input type="text" id="new-icad" placeholder="Enter ICAD Number (e.g., F4363832)" required>
             <button type="submit" class="btn btn-primary">Start Callout</button>
         </form>
+        <p id="callouts-this-year" class="callouts-count"></p>
     </div>
 
     <div id="attendance-area" class="attendance-area" style="display:none;">

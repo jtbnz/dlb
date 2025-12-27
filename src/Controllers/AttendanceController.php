@@ -38,6 +38,7 @@ class AttendanceController
             'callout' => $callout,
             'trucks' => Truck::findByBrigadeWithPositions($brigade['id']),
             'members' => Member::findByBrigadeOrdered($brigade['id'], $memberOrder),
+            'callouts_this_year' => Callout::countForYear($brigade['id']),
         ]);
     }
 

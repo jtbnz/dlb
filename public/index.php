@@ -109,6 +109,9 @@ $routes = [
     ['PUT', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)/unlock', 'AdminController@apiUnlockCallout'],
     ['DELETE', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)', 'AdminController@apiDeleteCallout'],
     ['GET', '/([a-z0-9-]+)/admin/api/callouts/export', 'AdminController@apiExportCallouts'],
+    ['POST', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)/attendance', 'AdminController@apiAddCalloutAttendance'],
+    ['DELETE', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)/attendance/([0-9]+)', 'AdminController@apiRemoveCalloutAttendance'],
+    ['PUT', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)/attendance/([0-9]+)', 'AdminController@apiMoveCalloutAttendance'],
 
     // Admin Settings
     ['GET', '/([a-z0-9-]+)/admin/settings', 'AdminController@settings'],

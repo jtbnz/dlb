@@ -425,7 +425,14 @@ class AdminController
         }
 
         $callout['attendance_grouped'] = Attendance::findByCalloutGrouped((int)$calloutId);
-        json_response(['callout' => $callout]);
+
+        // Include trucks and members for editing
+        $memberOrder = Brigade::getMemberOrder($brigade);
+        json_response([
+            'callout' => $callout,
+            'trucks' => Truck::findByBrigadeWithPositions($brigade['id']),
+            'members' => Member::findByBrigadeOrdered($brigade['id'], $memberOrder),
+        ]);
     }
 
     public function apiUnlockCallout(string $slug, string $calloutId): void
@@ -461,6 +468,184 @@ class AdminController
 
         audit_log($brigade['id'], (int)$calloutId, 'callout_deleted', ['icad_number' => $callout['icad_number']]);
         json_response(['success' => true]);
+    }
+
+    public function apiAddCalloutAttendance(string $slug, string $calloutId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $memberId = (int)($data['member_id'] ?? 0);
+        $truckId = (int)($data['truck_id'] ?? 0);
+        $positionId = (int)($data['position_id'] ?? 0);
+
+        // Validate member
+        $member = Member::findById($memberId);
+        if (!$member || $member['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid member'], 400);
+            return;
+        }
+
+        // Validate truck and position
+        $truck = Truck::findById($truckId);
+        if (!$truck || $truck['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid truck'], 400);
+            return;
+        }
+
+        $position = Position::findById($positionId);
+        if (!$position || $position['truck_id'] !== $truckId) {
+            json_response(['error' => 'Invalid position'], 400);
+            return;
+        }
+
+        // Check if position allows multiple (for standby)
+        if (!$position['allow_multiple']) {
+            $existing = db()->queryOne(
+                "SELECT id FROM attendance WHERE callout_id = ? AND position_id = ?",
+                [(int)$calloutId, $positionId]
+            );
+            if ($existing) {
+                json_response(['error' => 'Position already filled'], 400);
+                return;
+            }
+        }
+
+        // Check if member is already assigned
+        $existing = db()->queryOne(
+            "SELECT id FROM attendance WHERE callout_id = ? AND member_id = ?",
+            [(int)$calloutId, $memberId]
+        );
+        if ($existing) {
+            json_response(['error' => 'Member already assigned to this callout'], 400);
+            return;
+        }
+
+        try {
+            Attendance::create([
+                'callout_id' => (int)$calloutId,
+                'member_id' => $memberId,
+                'truck_id' => $truckId,
+                'position_id' => $positionId,
+            ]);
+
+            audit_log($brigade['id'], (int)$calloutId, 'admin_attendance_added', [
+                'member_id' => $memberId,
+                'member_name' => $member['name'],
+                'truck_id' => $truckId,
+                'position_id' => $positionId,
+            ]);
+
+            json_response([
+                'success' => true,
+                'attendance_grouped' => Attendance::findByCalloutGrouped((int)$calloutId),
+            ]);
+        } catch (\Exception $e) {
+            json_response(['error' => 'Failed to add attendance'], 500);
+        }
+    }
+
+    public function apiRemoveCalloutAttendance(string $slug, string $calloutId, string $attendanceId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        $attendance = Attendance::findById((int)$attendanceId);
+        if (!$attendance || $attendance['callout_id'] !== (int)$calloutId) {
+            json_response(['error' => 'Attendance record not found'], 404);
+            return;
+        }
+
+        $member = Member::findById($attendance['member_id']);
+
+        Attendance::delete((int)$attendanceId);
+
+        audit_log($brigade['id'], (int)$calloutId, 'admin_attendance_removed', [
+            'member_id' => $attendance['member_id'],
+            'member_name' => $member ? $member['name'] : 'Unknown',
+        ]);
+
+        json_response([
+            'success' => true,
+            'attendance_grouped' => Attendance::findByCalloutGrouped((int)$calloutId),
+        ]);
+    }
+
+    public function apiMoveCalloutAttendance(string $slug, string $calloutId, string $attendanceId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        $attendance = Attendance::findById((int)$attendanceId);
+        if (!$attendance || $attendance['callout_id'] !== (int)$calloutId) {
+            json_response(['error' => 'Attendance record not found'], 404);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $truckId = (int)($data['truck_id'] ?? 0);
+        $positionId = (int)($data['position_id'] ?? 0);
+
+        // Validate truck and position
+        $truck = Truck::findById($truckId);
+        if (!$truck || $truck['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid truck'], 400);
+            return;
+        }
+
+        $position = Position::findById($positionId);
+        if (!$position || $position['truck_id'] !== $truckId) {
+            json_response(['error' => 'Invalid position'], 400);
+            return;
+        }
+
+        // Check if position allows multiple (for standby)
+        if (!$position['allow_multiple']) {
+            $existing = db()->queryOne(
+                "SELECT id FROM attendance WHERE callout_id = ? AND position_id = ? AND id != ?",
+                [(int)$calloutId, $positionId, (int)$attendanceId]
+            );
+            if ($existing) {
+                json_response(['error' => 'Position already filled'], 400);
+                return;
+            }
+        }
+
+        $member = Member::findById($attendance['member_id']);
+
+        // Update the attendance record
+        db()->update('attendance', [
+            'truck_id' => $truckId,
+            'position_id' => $positionId,
+        ], 'id = ?', [(int)$attendanceId]);
+
+        audit_log($brigade['id'], (int)$calloutId, 'admin_attendance_moved', [
+            'member_id' => $attendance['member_id'],
+            'member_name' => $member ? $member['name'] : 'Unknown',
+            'new_truck_id' => $truckId,
+            'new_position_id' => $positionId,
+        ]);
+
+        json_response([
+            'success' => true,
+            'attendance_grouped' => Attendance::findByCalloutGrouped((int)$calloutId),
+        ]);
     }
 
     public function apiExportCallouts(string $slug): void

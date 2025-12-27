@@ -106,6 +106,21 @@ class Callout
         return db()->delete('callouts', 'id = ?', [$id]);
     }
 
+    public static function countForYear(int $brigadeId, int $year = null): int
+    {
+        $year = $year ?? (int)date('Y');
+        $startOfYear = "{$year}-01-01 00:00:00";
+        $endOfYear = "{$year}-12-31 23:59:59";
+
+        $result = db()->queryOne(
+            "SELECT COUNT(*) as count FROM callouts
+             WHERE brigade_id = ? AND status = 'submitted' AND created_at >= ? AND created_at <= ?",
+            [$brigadeId, $startOfYear, $endOfYear]
+        );
+
+        return (int)($result['count'] ?? 0);
+    }
+
     public static function getWithAttendance(int $id): ?array
     {
         $callout = self::findById($id);

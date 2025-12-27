@@ -9,7 +9,8 @@
         availableMembers: [],
         selectedMember: null,
         eventSource: null,
-        isProcessing: false
+        isProcessing: false,
+        calloutsThisYear: 0
     };
 
     // DOM Elements
@@ -48,6 +49,7 @@
 
             state.trucks = data.trucks || [];
             state.members = data.members || [];
+            state.calloutsThisYear = data.callouts_this_year || 0;
 
             if (data.callout) {
                 state.callout = data.callout;
@@ -368,6 +370,12 @@
         elements.loading.style.display = 'none';
         elements.noCallout.style.display = 'block';
         elements.attendanceArea.style.display = 'none';
+
+        // Display callouts this year count
+        const countElement = document.getElementById('callouts-this-year');
+        if (countElement) {
+            countElement.textContent = `Callouts this year: ${state.calloutsThisYear}`;
+        }
     }
 
     function showAttendanceArea() {
