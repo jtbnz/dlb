@@ -20,6 +20,7 @@ ob_start();
                 <th>First Name</th>
                 <th>Last Name</th>
                 <th>Email</th>
+                <th>Join Date</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -136,6 +137,7 @@ function renderMembers() {
             <td>${escapeHtml(m.first_name || '')}</td>
             <td>${escapeHtml(m.last_name || '')}</td>
             <td>${escapeHtml(m.email || '')}</td>
+            <td>${formatDate(m.join_date)}</td>
             <td>${m.is_active ? '<span class="status-badge status-active">Active</span>' : '<span class="status-badge status-inactive">Inactive</span>'}</td>
             <td>
                 <button class="btn-small" onclick="editMember(${m.id})">Edit</button>
@@ -264,6 +266,12 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-NZ');
 }
 
 loadMembers();

@@ -28,9 +28,12 @@ class Member
         if ($activeOnly) {
             $sql .= " AND is_active = 1";
         }
-        $sql .= " ORDER BY display_name";
+        $sql .= " ORDER BY last_name, first_name";
 
-        return db()->query($sql, [$brigadeId]);
+        $members = db()->query($sql, [$brigadeId]);
+
+        // Sort by rank (highest first), then by last_name
+        return self::sortMembers($members, 'rank_surname');
     }
 
     /**
@@ -65,7 +68,7 @@ class Member
                     $dateA = $a['join_date'] ?? null;
                     $dateB = $b['join_date'] ?? null;
                     if ($dateA === null && $dateB === null) {
-                        return strcasecmp($a['display_name'] ?? '', $b['display_name'] ?? '');
+                        return strcasecmp($a['last_name'] ?? '', $b['last_name'] ?? '');
                     }
                     if ($dateA === null) return 1;
                     if ($dateB === null) return -1;
@@ -74,8 +77,23 @@ class Member
                 case 'alphabetical':
                     return strcasecmp($a['display_name'] ?? '', $b['display_name'] ?? '');
 
-                case 'rank_name':
+                case 'rank_surname':
                 default:
+                    // First by rank (highest first), then by last_name (ascending)
+                    $rankA = self::getRankOrder($a['rank'] ?? '');
+                    $rankB = self::getRankOrder($b['rank'] ?? '');
+                    if ($rankA !== $rankB) {
+                        return $rankA - $rankB;
+                    }
+                    // Then by last name
+                    $lastNameCmp = strcasecmp($a['last_name'] ?? '', $b['last_name'] ?? '');
+                    if ($lastNameCmp !== 0) {
+                        return $lastNameCmp;
+                    }
+                    // Then by first name
+                    return strcasecmp($a['first_name'] ?? '', $b['first_name'] ?? '');
+
+                case 'rank_name':
                     // First by rank, then by display_name
                     $rankA = self::getRankOrder($a['rank'] ?? '');
                     $rankB = self::getRankOrder($b['rank'] ?? '');
