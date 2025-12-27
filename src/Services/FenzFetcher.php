@@ -153,10 +153,18 @@ class FenzFetcher
 
         self::log("Fetching FENZ data: region={$region}, day={$day}");
 
+        // Use realistic browser headers to avoid bot detection
         $context = stream_context_create([
             'http' => [
-                'timeout' => 10,
-                'user_agent' => 'Mozilla/5.0 (compatible; BrigadeAttendance/1.0)',
+                'timeout' => 15,
+                'user_agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'header' => implode("\r\n", [
+                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language: en-NZ,en;q=0.9',
+                    'Accept-Encoding: identity',
+                    'Cache-Control: no-cache',
+                    'Connection: keep-alive',
+                ]),
             ],
         ]);
 
@@ -166,6 +174,16 @@ class FenzFetcher
             self::log("ERROR: Failed to fetch {$url}");
             return [];
         }
+
+        // Check for bot protection / challenge page
+        if (strpos($html, 'Incapsula') !== false || strpos($html, '_Incapsula_Resource') !== false) {
+            self::log("ERROR: FENZ website returned bot protection page - request blocked by Incapsula");
+            self::log("HTML length: " . strlen($html) . " bytes (bot protection page)");
+            return [];
+        }
+
+        // Log HTML snippet for debugging
+        self::log("Received HTML length: " . strlen($html) . " bytes");
 
         $incidents = self::parseIncidents($html);
         self::log("Parsed " . count($incidents) . " incidents from {$day}");
@@ -181,13 +199,16 @@ class FenzFetcher
     {
         $incidents = [];
 
-        // Find all report__table sections
-        // Match the structure: report__table containing rows with key/value pairs
-        $pattern = '/<div class="report__table"[^>]*>.*?<div class="report__table__body">(.*?)<\/div>\s*<\/div>/s';
+        // Find all report__table__body sections (each contains one incident)
+        // The structure is: <div class="report__table"><div class="report__table__body">...rows...</div></div>
+        $pattern = '/<div class="report__table__body">(.*?)<\/div>\s*<\/div>\s*<\/div>/s';
 
         if (!preg_match_all($pattern, $html, $tableMatches)) {
+            self::log("DEBUG: No report__table__body sections found in HTML");
             return [];
         }
+
+        self::log("DEBUG: Found " . count($tableMatches[1]) . " report table sections");
 
         foreach ($tableMatches[1] as $tableBody) {
             $incident = self::parseIncidentTable($tableBody);
@@ -214,7 +235,8 @@ class FenzFetcher
         ];
 
         // Pattern to match rows with key and value cells
-        $rowPattern = '/<div class="report__table__row">.*?<div class="report__table__cell report__table__cell--key">([^<]*)<\/div>.*?<div class="report__table__cell report__table__cell--value"><p>([^<]*)<\/p><\/div>.*?<\/div>/s';
+        // More flexible pattern that handles whitespace variations
+        $rowPattern = '/<div class="report__table__cell report__table__cell--key">\s*([^<]+?)\s*<\/div>\s*<div class="report__table__cell report__table__cell--value">\s*<p>\s*([^<]*?)\s*<\/p>/s';
 
         if (preg_match_all($rowPattern, $tableBody, $rowMatches, PREG_SET_ORDER)) {
             foreach ($rowMatches as $row) {

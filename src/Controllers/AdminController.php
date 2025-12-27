@@ -435,6 +435,55 @@ class AdminController
         ]);
     }
 
+    public function apiUpdateCallout(string $slug, string $calloutId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $updates = [];
+        $auditData = [];
+
+        // Allow updating ICAD number
+        if (isset($data['icad_number'])) {
+            $updates['icad_number'] = trim($data['icad_number']);
+            $auditData['icad_number'] = $updates['icad_number'];
+        }
+
+        // Allow updating FENZ data fields
+        if (isset($data['location'])) {
+            $updates['location'] = trim($data['location']) ?: null;
+            $auditData['location'] = $updates['location'];
+        }
+
+        if (isset($data['duration'])) {
+            $updates['duration'] = trim($data['duration']) ?: null;
+            $auditData['duration'] = $updates['duration'];
+        }
+
+        if (isset($data['call_type'])) {
+            $updates['call_type'] = trim($data['call_type']) ?: null;
+            $auditData['call_type'] = $updates['call_type'];
+        }
+
+        if (!empty($updates)) {
+            // Mark as manually fetched if FENZ data was updated
+            if (isset($data['location']) || isset($data['duration']) || isset($data['call_type'])) {
+                $updates['fenz_fetched_at'] = date('Y-m-d H:i:s');
+            }
+
+            Callout::update((int)$calloutId, $updates);
+            audit_log($brigade['id'], (int)$calloutId, 'callout_updated', $auditData);
+        }
+
+        json_response(['success' => true]);
+    }
+
     public function apiUnlockCallout(string $slug, string $calloutId): void
     {
         $brigade = AdminAuth::requireAuth($slug);

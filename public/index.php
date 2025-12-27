@@ -114,6 +114,7 @@ $routes = [
     ['GET', '/([a-z0-9-]+)/admin/callouts', 'AdminController@callouts'],
     ['GET', '/([a-z0-9-]+)/admin/api/callouts', 'AdminController@apiGetCallouts'],
     ['GET', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)', 'AdminController@apiGetCallout'],
+    ['PUT', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)', 'AdminController@apiUpdateCallout'],
     ['PUT', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)/unlock', 'AdminController@apiUnlockCallout'],
     ['DELETE', '/([a-z0-9-]+)/admin/api/callouts/([0-9]+)', 'AdminController@apiDeleteCallout'],
     ['GET', '/([a-z0-9-]+)/admin/api/callouts/export', 'AdminController@apiExportCallouts'],

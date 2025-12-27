@@ -106,6 +106,29 @@ ob_start();
     </div>
 </div>
 
+<!-- Edit Info Modal -->
+<div id="edit-info-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h2>Edit Incident Details</h2>
+        <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="edit-location" placeholder="e.g., Pukekohe, Auckland">
+        </div>
+        <div class="form-group">
+            <label>Call Type</label>
+            <input type="text" id="edit-call-type" placeholder="e.g., Structure Fire">
+        </div>
+        <div class="form-group">
+            <label>Duration</label>
+            <input type="text" id="edit-duration" placeholder="e.g., 00:45:00">
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="btn" onclick="closeEditInfoModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveCalloutInfo()">Save</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const SLUG = '<?= $slug ?>';
 const BASE = window.BASE_PATH || '';
@@ -176,6 +199,18 @@ function renderCalloutDetails() {
         <p><strong>Created:</strong> ${formatDate(callout.created_at)}</p>
         ${callout.submitted_at ? `<p><strong>Submitted:</strong> ${formatDate(callout.submitted_at)} by ${escapeHtml(callout.submitted_by || 'Unknown')}</p>` : ''}
         <p><a href="https://sitrep.fireandemergency.nz/report/${encodeURIComponent(callout.icad_number)}" target="_blank">View ICAD Report</a></p>
+        <hr>
+        <div class="callout-edit-header">
+            <h3>Incident Details</h3>
+            <button class="btn btn-small" onclick="showEditInfoModal()">Edit</button>
+            ${callout.icad_number.startsWith('F') ? `<button class="btn btn-small btn-primary" onclick="fetchFromFenz()">Fetch from FENZ</button>` : ''}
+        </div>
+        <div class="incident-info">
+            <p><strong>Location:</strong> ${escapeHtml(callout.location) || '<em>Not set</em>'}</p>
+            <p><strong>Call Type:</strong> ${escapeHtml(callout.call_type) || '<em>Not set</em>'}</p>
+            <p><strong>Duration:</strong> ${escapeHtml(callout.duration) || '<em>Not set</em>'}</p>
+            ${callout.fenz_fetched_at ? `<p class="fenz-fetched"><small>Data fetched: ${formatDate(callout.fenz_fetched_at)}</small></p>` : '<p class="fenz-pending"><small>FENZ data not yet fetched</small></p>'}
+        </div>
         <hr>
         <div class="callout-edit-header">
             <h3>Attendance</h3>
@@ -334,6 +369,76 @@ function showMoveModal(attendanceId, memberName) {
 function closeMoveModal() {
     document.getElementById('move-member-modal').style.display = 'none';
     moveAttendanceId = null;
+}
+
+function showEditInfoModal() {
+    document.getElementById('edit-location').value = currentCallout.location || '';
+    document.getElementById('edit-call-type').value = currentCallout.call_type || '';
+    document.getElementById('edit-duration').value = currentCallout.duration || '';
+    document.getElementById('edit-info-modal').style.display = 'flex';
+}
+
+function closeEditInfoModal() {
+    document.getElementById('edit-info-modal').style.display = 'none';
+}
+
+async function saveCalloutInfo() {
+    const location = document.getElementById('edit-location').value;
+    const callType = document.getElementById('edit-call-type').value;
+    const duration = document.getElementById('edit-duration').value;
+
+    try {
+        const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                location: location,
+                call_type: callType,
+                duration: duration
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Refresh callout data
+        await refreshCalloutData();
+        renderCalloutDetails();
+        closeEditInfoModal();
+    } catch (error) {
+        alert('Failed to save incident details');
+    }
+}
+
+async function fetchFromFenz() {
+    const icad = currentCallout.icad_number;
+    if (!icad || !icad.startsWith('F')) {
+        alert('Invalid ICAD number for FENZ lookup');
+        return;
+    }
+
+    // Determine which day to check based on callout date
+    const calloutDate = new Date(currentCallout.created_at);
+    const dayName = calloutDate.toLocaleDateString('en-NZ', { weekday: 'long' });
+
+    // Open in new window so user's browser can handle Incapsula
+    const fenzUrl = `https://www.fireandemergency.nz/incidents-and-news/incident-reports/incidents/?region=1&day=${dayName}`;
+
+    const instructions = `To fetch FENZ data for ${icad}:
+
+1. A new window will open with the FENZ incident reports page
+2. Find the incident with number "${icad}"
+3. Copy the Location, Duration, and Call Type values
+4. Close the FENZ window and click "Edit" to enter the values manually
+
+Note: Due to FENZ website security, automatic fetching is not possible.`;
+
+    alert(instructions);
+    window.open(fenzUrl, '_blank');
 }
 
 function updateMovePositionSelect() {

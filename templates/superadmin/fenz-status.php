@@ -11,6 +11,14 @@ $content = <<<HTML
     </header>
 
     <main class="admin-main">
+        <section class="admin-section warning-section">
+            <div class="warning-box">
+                <strong>Note:</strong> The FENZ website uses Incapsula bot protection which blocks automated server-side requests.
+                If you see "bot protection page" errors in the logs, this is expected. The data fetch will only work if
+                requests are made from an IP that has passed the Incapsula challenge (typically by visiting the site in a browser first).
+            </div>
+        </section>
+
         <section class="admin-section">
             <div class="section-header">
                 <h2>Current Status</h2>
@@ -105,11 +113,24 @@ $content = <<<HTML
 .loading { color: #6b7280; }
 .error-message { color: #dc2626; }
 .no-data { color: #6b7280; font-style: italic; }
+
+.warning-box { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; color: #92400e; line-height: 1.5; }
+.warning-box strong { color: #78350f; }
 </style>
 
 <script>
 const BASE = '{$basePath}';
 let statusData = null;
+
+function formatDateYMD(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    return `\${y}-\${m}-\${d} \${h}:\${min}:\${s}`;
+}
 
 async function loadStatus() {
     try {
@@ -153,11 +174,12 @@ function renderStatus() {
     } else {
         fetchContainer.innerHTML = brigadeIds.map(id => {
             const s = fetchStatus[id];
+            const nextAvailable = formatDateYMD(new Date(s.next_fetch_available * 1000));
             return `
                 <div class="fetch-card">
                     <h4>Brigade ID: \${id}</h4>
                     <div class="detail">Last fetch: \${s.last_fetch_formatted}</div>
-                    <div class="detail">Next available: \${new Date(s.next_fetch_available * 1000).toLocaleString()}</div>
+                    <div class="detail">Next available: \${nextAvailable}</div>
                     <div class="detail \${s.can_fetch_now ? 'can-fetch' : 'rate-limited'}">
                         \${s.can_fetch_now ? 'Can fetch now' : 'Rate limited'}
                     </div>
