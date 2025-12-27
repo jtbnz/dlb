@@ -364,6 +364,8 @@
         elements.loading.style.display = 'block';
         elements.noCallout.style.display = 'none';
         elements.attendanceArea.style.display = 'none';
+        const historyPanel = document.getElementById('history-panel');
+        if (historyPanel) historyPanel.style.display = 'none';
     }
 
     function showNoCallout() {
@@ -376,12 +378,24 @@
         if (countElement) {
             countElement.textContent = `Callouts this year: ${state.calloutsThisYear}`;
         }
+
+        // Show history panel and set correct URL
+        const historyPanel = document.getElementById('history-panel');
+        const historyLink = document.getElementById('history-link');
+        if (historyPanel) {
+            historyPanel.style.display = 'block';
+        }
+        if (historyLink) {
+            historyLink.href = `${BASE}/${SLUG}/history`;
+        }
     }
 
     function showAttendanceArea() {
         elements.loading.style.display = 'none';
         elements.noCallout.style.display = 'none';
         elements.attendanceArea.style.display = 'flex';
+        const historyPanel = document.getElementById('history-panel');
+        if (historyPanel) historyPanel.style.display = 'none';
 
         // Display the ICAD number (Muster-YYYY-MM-DD will show as stored)
         elements.icadNumber.textContent = state.callout.icad_number;

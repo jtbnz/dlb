@@ -1,11 +1,12 @@
 <?php
+$basePath = base_path();
 $extraHead = '<script>window.BRIGADE_SLUG = "' . sanitize($slug) . '";</script>';
 
 $content = <<<HTML
 <div class="history-container">
     <header class="history-header">
         <div class="header-left">
-            <a href="{$_ENV['BASE_PATH']}/{$slug}" class="back-link">&larr; Back to Attendance</a>
+            <a href="{$basePath}/{$slug}/attendance" class="back-link">&larr; Back to Attendance</a>
             <h1>Recent Callouts</h1>
             <p class="subtitle">Last 30 days</p>
         </div>
