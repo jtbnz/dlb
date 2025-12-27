@@ -59,12 +59,15 @@ $routes = [
     ['PUT', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiUpdateBrigade'],
     ['DELETE', '/admin/api/brigades/([0-9]+)', 'SuperAdminController@apiDeleteBrigade'],
 
+    // Attendance entry (PIN required) - must come before catch-all brigade route
+    ['GET', '/([a-z0-9-]+)/attendance', 'AttendanceController@index'],
+    ['GET', '/([a-z0-9-]+)/history', 'AttendanceController@history'],
+
     // Brigade PIN entry and auth
     ['GET', '/([a-z0-9-]+)', 'AuthController@showPin'],
     ['POST', '/([a-z0-9-]+)/auth', 'AuthController@verifyPin'],
 
-    // Attendance entry (PIN required)
-    ['GET', '/([a-z0-9-]+)/attendance', 'AttendanceController@index'],
+    // Attendance API routes
     ['GET', '/([a-z0-9-]+)/api/callout/active', 'AttendanceController@getActive'],
     ['GET', '/([a-z0-9-]+)/api/callout/last-attendance', 'AttendanceController@getLastCallAttendance'],
     ['POST', '/([a-z0-9-]+)/api/callout', 'AttendanceController@createCallout'],
@@ -76,7 +79,6 @@ $routes = [
     ['POST', '/([a-z0-9-]+)/api/attendance', 'AttendanceController@addAttendance'],
     ['DELETE', '/([a-z0-9-]+)/api/attendance/([0-9]+)', 'AttendanceController@removeAttendance'],
     ['GET', '/([a-z0-9-]+)/api/sse/callout/([0-9]+)', 'SSEController@stream'],
-    ['GET', '/([a-z0-9-]+)/history', 'AttendanceController@history'],
     ['GET', '/([a-z0-9-]+)/api/history', 'AttendanceController@apiGetHistory'],
     ['GET', '/([a-z0-9-]+)/api/history/([0-9]+)', 'AttendanceController@apiGetHistoryDetail'],
 

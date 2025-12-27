@@ -1196,21 +1196,32 @@ input:focus, select:focus, textarea:focus {
     }
 }
 
-/* ===== Recent Callouts Link ===== */
-.recent-callouts-link {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--gray-200);
+/* ===== Start Callout & History Sections ===== */
+.start-callout-section {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--gray-200);
 }
 
-.recent-callouts-link a {
-    color: var(--primary);
-    text-decoration: none;
-    font-size: 1rem;
+.history-section {
+    text-align: center;
 }
 
-.recent-callouts-link a:hover {
-    text-decoration: underline;
+.history-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: var(--gray-700);
+}
+
+.btn-secondary {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
 }
 
 /* ===== History Page ===== */

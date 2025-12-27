@@ -25,14 +25,17 @@ $content = <<<HTML
     </header>
 
     <div id="no-callout" class="no-callout" style="display:none;">
-        <h2>Start New Callout</h2>
-        <form id="new-callout-form">
-            <input type="text" id="new-icad" placeholder="Enter ICAD Number (e.g., F4363832)" required>
-            <button type="submit" class="btn btn-primary">Start Callout</button>
-        </form>
-        <p id="callouts-this-year" class="callouts-count"></p>
-        <div class="recent-callouts-link">
-            <a href="{$_ENV['BASE_PATH']}/{$slug}/history">Browse Recent Callouts</a>
+        <div class="start-callout-section">
+            <h2>Start New Callout</h2>
+            <form id="new-callout-form">
+                <input type="text" id="new-icad" placeholder="Enter ICAD Number (e.g., F4363832)" required>
+                <button type="submit" class="btn btn-primary">Start Callout</button>
+            </form>
+            <p id="callouts-this-year" class="callouts-count"></p>
+        </div>
+        <div class="history-section">
+            <h2>History</h2>
+            <a href="{$_ENV['BASE_PATH']}/{$slug}/history" class="btn btn-secondary">Browse Recent Callouts</a>
         </div>
     </div>
 
