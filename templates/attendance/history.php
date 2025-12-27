@@ -63,13 +63,21 @@ async function loadCallouts() {
     }
 }
 
+function formatNZDate(dateString) {
+    // Database stores UTC time, append Z to parse as UTC
+    const date = new Date(dateString.replace(' ', 'T') + 'Z');
+    return {
+        dateStr: date.toLocaleDateString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', day: 'numeric', month: 'short' }),
+        timeStr: date.toLocaleTimeString('en-NZ', { timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit' }),
+        fullDateStr: date.toLocaleDateString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    };
+}
+
 function renderCallouts(callouts) {
     const container = document.getElementById('callouts-list');
 
     container.innerHTML = callouts.map(c => {
-        const date = new Date(c.created_at);
-        const dateStr = date.toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short' });
-        const timeStr = date.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' });
+        const { dateStr, timeStr } = formatNZDate(c.created_at);
 
         const location = c.location || 'Location pending...';
         const callType = c.call_type || '';
@@ -113,15 +121,13 @@ async function viewCallout(id) {
 }
 
 function renderCalloutDetail(callout) {
-    const date = new Date(callout.created_at);
-    const dateStr = date.toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const timeStr = date.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' });
+    const { fullDateStr, timeStr } = formatNZDate(callout.created_at);
 
     document.getElementById('modal-title').textContent = callout.icad_number;
 
     let html = `
         <div class="callout-detail-header">
-            <p><strong>Date:</strong> \${dateStr} at \${timeStr}</p>
+            <p><strong>Date:</strong> \${fullDateStr} at \${timeStr}</p>
             \${callout.location ? `<p><strong>Location:</strong> \${escapeHtml(callout.location)}</p>` : ''}
             \${callout.call_type ? `<p><strong>Type:</strong> \${escapeHtml(callout.call_type)}</p>` : ''}
             \${callout.duration ? `<p><strong>Duration:</strong> \${escapeHtml(callout.duration)}</p>` : ''}
