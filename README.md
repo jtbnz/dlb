@@ -5,12 +5,13 @@ A web-based attendance tracking system designed for volunteer fire brigades to r
 ## Features
 
 ### Attendance Entry (PIN-Protected)
-- **Real-time Callout Management**: Start new callouts with ICAD numbers
+- **Real-time Callout Management**: Start new callouts with ICAD numbers, location, and call type
 - **Truck & Position Assignment**: Assign members to specific positions on trucks (OIC, Driver, Crew 1-4)
 - **Station Standby**: Track members remaining at the station
 - **Live Synchronisation**: Multiple devices can update attendance simultaneously via Server-Sent Events (SSE)
 - **Mobile-Optimised**: Responsive design works on phones, tablets, and desktop
 - **PWA Support**: Install as an app on mobile devices for quick access
+- **Callout History**: Browse recent callouts with attendance details
 
 ### Admin Dashboard
 - **Member Management**: Add, edit, import (CSV), and deactivate members with rank and join date
@@ -21,6 +22,10 @@ A web-based attendance tracking system designed for volunteer fire brigades to r
 - **Backup & Restore**: Download and restore SQLite database backups
 - **Audit Log**: Track all system actions with timestamps and IP addresses
 
+### Super Admin (System-wide)
+- **Multi-Brigade Management**: Create and manage multiple brigades from a central dashboard
+- **FENZ Data Status**: Monitor automated incident data fetching status
+
 ### Member Ordering Options
 Members can be sorted by:
 - **Rank then Name** (default): CFO → DCFO → SSO → SO → SFF → QFF → FF → RCFF, then alphabetically
@@ -30,10 +35,199 @@ Members can be sorted by:
 ### Security
 - PIN protection for attendance entry (4-6 digits)
 - Separate admin authentication with username/password
+- Super admin for system-wide management
 - Rate limiting on login attempts
 - Session timeout (30 min admin, 24 hours PIN)
 - CSRF protection
 - Audit logging
+
+---
+
+## Architecture Overview
+
+### System Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT LAYER                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│   │   Mobile     │    │   Desktop    │    │   Tablet     │                 │
+│   │   Browser    │    │   Browser    │    │   Browser    │                 │
+│   └──────┬───────┘    └──────┬───────┘    └──────┬───────┘                 │
+│          │                   │                   │                          │
+│          └───────────────────┼───────────────────┘                          │
+│                              ▼                                               │
+│                    ┌─────────────────┐                                      │
+│                    │  Service Worker │  ◄── Offline caching, background    │
+│                    │     (sw.js)     │      sync, request queuing          │
+│                    └────────┬────────┘                                      │
+│                              │                                               │
+└──────────────────────────────┼───────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           APPLICATION LAYER                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   public/index.php (Front Controller & Router)                              │
+│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                               │
+│                              │                                               │
+│         ┌────────────────────┼────────────────────┐                         │
+│         ▼                    ▼                    ▼                         │
+│   ┌───────────┐       ┌───────────┐       ┌───────────┐                    │
+│   │Controllers│       │Middleware │       │ Services  │                    │
+│   ├───────────┤       ├───────────┤       ├───────────┤                    │
+│   │Attendance │◄─────►│ PinAuth   │       │ Database  │                    │
+│   │Admin      │       │ AdminAuth │       │ Email     │                    │
+│   │SuperAdmin │       │ SuperAdmin│       │ FenzFetch │                    │
+│   │Auth       │       │   Auth    │       │           │                    │
+│   │SSE        │       └───────────┘       └───────────┘                    │
+│   │Home       │              │                   │                          │
+│   └─────┬─────┘              │                   │                          │
+│         │                    │                   │                          │
+│         └────────────────────┼───────────────────┘                          │
+│                              ▼                                               │
+│                       ┌───────────┐                                         │
+│                       │  Models   │                                         │
+│                       ├───────────┤                                         │
+│                       │ Brigade   │                                         │
+│                       │ Callout   │                                         │
+│                       │ Attendance│                                         │
+│                       │ Member    │                                         │
+│                       │ Truck     │                                         │
+│                       │ Position  │                                         │
+│                       └─────┬─────┘                                         │
+│                              │                                               │
+└──────────────────────────────┼───────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATA LAYER                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌─────────────────────────────────────────────────────────────────┐       │
+│   │                      SQLite Database                             │       │
+│   │                    (data/database.sqlite)                        │       │
+│   ├─────────────────────────────────────────────────────────────────┤       │
+│   │  brigades │ callouts │ attendance │ members │ trucks │ positions│       │
+│   │  audit_log│ rate_limits                                         │       │
+│   └─────────────────────────────────────────────────────────────────┘       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Request Flow
+
+```
+┌─────────┐     ┌─────────┐     ┌────────────┐     ┌──────────┐     ┌────────┐
+│ Browser │────►│ Apache  │────►│ index.php  │────►│Controller│────►│ Model  │
+│         │     │.htaccess│     │  (Router)  │     │          │     │        │
+└─────────┘     └─────────┘     └────────────┘     └──────────┘     └────────┘
+                                       │                                  │
+                                       ▼                                  ▼
+                                ┌────────────┐                     ┌──────────┐
+                                │ Middleware │                     │  SQLite  │
+                                │ (Auth)     │                     │    DB    │
+                                └────────────┘                     └──────────┘
+                                       │
+                                       ▼
+                                ┌────────────┐
+                                │  Template  │
+                                │   (View)   │
+                                └────────────┘
+```
+
+### Real-Time Sync (SSE)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        REAL-TIME UPDATE FLOW                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   Device A                    Server                      Device B           │
+│   ────────                    ──────                      ────────           │
+│      │                           │                           │               │
+│      │◄──── SSE Connection ─────►│◄──── SSE Connection ─────►│              │
+│      │                           │                           │               │
+│      │                           │                           │               │
+│      │─── POST /attendance ─────►│                           │               │
+│      │                           │                           │               │
+│      │                      ┌────┴────┐                      │               │
+│      │                      │ Update  │                      │               │
+│      │                      │   DB    │                      │               │
+│      │                      └────┬────┘                      │               │
+│      │                           │                           │               │
+│      │◄── SSE: attendance ───────┤───── SSE: attendance ────►│              │
+│      │    updated                │       updated             │               │
+│      │                           │                           │               │
+│      ▼                           ▼                           ▼               │
+│   UI Updated                                              UI Updated         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Model
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ENTITY RELATIONSHIPS                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│   ┌──────────┐                                                              │
+│   │ Brigade  │                                                              │
+│   │──────────│                                                              │
+│   │ id       │                                                              │
+│   │ name     │                                                              │
+│   │ slug     │◄─────────────────────────────────────────────┐               │
+│   │ pin_hash │                                              │               │
+│   │ region   │                                              │               │
+│   └────┬─────┘                                              │               │
+│        │                                                    │               │
+│        │ 1:N                                                │               │
+│        ▼                                                    │               │
+│   ┌──────────┐     ┌──────────┐     ┌──────────┐           │               │
+│   │  Truck   │     │  Member  │     │  Callout │           │               │
+│   │──────────│     │──────────│     │──────────│           │               │
+│   │ id       │     │ id       │     │ id       │           │               │
+│   │ name     │     │ name     │     │ icad_num │           │               │
+│   │ is_station│    │ rank     │     │ location │           │               │
+│   │ sort_order│    │ join_date│     │ call_type│           │               │
+│   └────┬─────┘     │ is_active│     │ status   │           │               │
+│        │           └────┬─────┘     └────┬─────┘           │               │
+│        │ 1:N            │                │                  │               │
+│        ▼                │                │ 1:N              │               │
+│   ┌──────────┐          │                ▼                  │               │
+│   │ Position │          │          ┌──────────┐            │               │
+│   │──────────│          │          │Attendance│            │               │
+│   │ id       │          └─────────►│──────────│◄───────────┘               │
+│   │ name     │                     │ id       │                             │
+│   │ allow_   │                     │callout_id│                             │
+│   │ multiple │◄────────────────────│member_id │                             │
+│   └──────────┘                     │truck_id  │                             │
+│                                    │position_id                             │
+│                                    └──────────┘                             │
+│                                                                              │
+│   ┌──────────┐                                                              │
+│   │Audit Log │  (Tracks all actions with IP, timestamp, details)            │
+│   └──────────┘                                                              │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| Frontend | Vanilla JS, HTML5, CSS3 | UI rendering, drag-and-drop |
+| Real-time | Server-Sent Events (SSE) | Live attendance updates |
+| Offline | Service Worker + IndexedDB | PWA caching, offline queue |
+| Backend | PHP 8.x | Application logic, routing |
+| Database | SQLite | Data persistence |
+| Auth | Session-based | PIN + password authentication |
+
+---
 
 ## Requirements
 
@@ -50,23 +244,68 @@ dlb/
 │   ├── config.sample.php   # Sample configuration (copy to config.php)
 │   └── config.php          # Your local configuration (git-ignored)
 ├── data/
-│   └── database.sqlite     # SQLite database (auto-created)
+│   ├── database.sqlite     # SQLite database (auto-created)
+│   └── fenz_cache/         # FENZ data fetch cache
 ├── public/
 │   ├── .htaccess           # Apache rewrite rules
-│   ├── index.php           # Application entry point
+│   ├── index.php           # Application entry point & router
+│   ├── cron.php            # Background job endpoint
+│   ├── sw.js               # Service Worker for PWA
+│   ├── manifest.json       # PWA manifest
 │   └── assets/
 │       ├── css/app.css     # Stylesheet
-│       └── js/
-│           ├── admin.js    # Admin utilities
-│           └── attendance.js # Attendance app
+│       ├── js/
+│       │   ├── admin.js    # Admin utilities
+│       │   └── attendance.js # Attendance app
+│       └── images/         # Icons and images
 ├── src/
-│   ├── Controllers/        # Route handlers
-│   ├── Middleware/         # Auth middleware
-│   ├── Models/             # Database models
-│   ├── Services/           # Database service
-│   └── helpers.php         # Helper functions
-└── templates/              # PHP view templates
+│   ├── Controllers/
+│   │   ├── AttendanceController.php  # Callout & attendance APIs
+│   │   ├── AdminController.php       # Brigade admin APIs
+│   │   ├── SuperAdminController.php  # System admin APIs
+│   │   ├── AuthController.php        # PIN & login handling
+│   │   ├── SSEController.php         # Real-time event streaming
+│   │   └── HomeController.php        # Landing page
+│   ├── Middleware/
+│   │   ├── PinAuth.php         # PIN authentication
+│   │   ├── AdminAuth.php       # Admin authentication
+│   │   └── SuperAdminAuth.php  # Super admin authentication
+│   ├── Models/
+│   │   ├── Brigade.php    # Brigade data access
+│   │   ├── Callout.php    # Callout data access
+│   │   ├── Attendance.php # Attendance records
+│   │   ├── Member.php     # Member management
+│   │   ├── Truck.php      # Truck configuration
+│   │   └── Position.php   # Position definitions
+│   ├── Services/
+│   │   ├── Database.php   # SQLite connection & schema
+│   │   ├── EmailService.php # Email notifications
+│   │   └── FenzFetcher.php  # FENZ incident data
+│   └── helpers.php        # Utility functions
+└── templates/
+    ├── layouts/
+    │   ├── app.php        # Main layout
+    │   ├── admin.php      # Admin layout
+    │   └── error.php      # Error pages
+    ├── attendance/
+    │   ├── entry.php      # Attendance entry UI
+    │   ├── history.php    # Callout history browser
+    │   └── pin.php        # PIN entry form
+    ├── admin/
+    │   ├── dashboard.php  # Admin overview
+    │   ├── members.php    # Member management
+    │   ├── trucks.php     # Truck configuration
+    │   ├── callouts.php   # Callout management
+    │   ├── settings.php   # Brigade settings
+    │   ├── audit.php      # Audit log viewer
+    │   └── login.php      # Admin login
+    └── superadmin/
+        ├── dashboard.php  # System overview
+        ├── fenz-status.php # FENZ fetch status
+        └── login.php      # Super admin login
 ```
+
+---
 
 ## Deployment Instructions
 
@@ -172,6 +411,8 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 4. Default credentials: `admin` / `admin123`
 5. **Change the password immediately!**
 
+---
+
 ## Configuration Options
 
 ### Email Settings
@@ -209,13 +450,26 @@ Configure email notifications for submitted callouts:
 ],
 ```
 
+### Super Admin
+
+```php
+'super_admin' => [
+    'enabled' => true,
+    'username' => 'superadmin',
+    'password_hash' => password_hash('your-secure-password', PASSWORD_DEFAULT),
+],
+```
+
+---
+
 ## Usage
 
 ### Starting a Callout
 
 1. Enter PIN at brigade page
 2. Enter ICAD number (e.g., F4363832)
-3. Click "Start Callout"
+3. Optionally enter date/time, location, and call type
+4. Click "Start Callout"
 
 ### Recording Attendance
 
@@ -223,6 +477,7 @@ Configure email notifications for submitted callouts:
 2. Click a position on a truck to assign them
 3. Click an assigned position to remove the member
 4. Use "Station" for standby personnel
+5. Changes sync in real-time to all connected devices
 
 ### Submitting Attendance
 
@@ -231,15 +486,58 @@ Configure email notifications for submitted callouts:
 3. Email notifications are sent (if configured)
 4. Callout becomes read-only
 
+### Viewing History
+
+1. From the "Start New Callout" screen, click "Browse Recent Callouts"
+2. View callouts from the last 30 days
+3. Click on a callout to see full attendance details
+4. Link to SITREP report for each callout
+
 ### Admin Tasks
 
 Access admin at `/{brigade-slug}/admin`:
 - **Dashboard**: Overview and quick actions
 - **Members**: Manage brigade roster
 - **Trucks**: Configure vehicles and positions
-- **Callouts**: View history and unlock if needed
+- **Callouts**: View history, edit details, unlock if needed
 - **Settings**: Configure brigade options
 - **Audit Log**: Review system activity
+
+---
+
+## API Reference
+
+### Public Endpoints
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/{slug}` | Brigade entry page |
+| POST | `/{slug}/auth` | PIN authentication |
+
+### Member Endpoints (PIN Required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/{slug}/api/callout/active` | Get active callout or state |
+| POST | `/{slug}/api/callout` | Create new callout |
+| PUT | `/{slug}/api/callout/{id}` | Update callout (ICAD) |
+| POST | `/{slug}/api/callout/{id}/submit` | Submit callout |
+| POST | `/{slug}/api/attendance` | Add attendance record |
+| DELETE | `/{slug}/api/attendance/{id}` | Remove attendance |
+| GET | `/{slug}/api/sse/callout/{id}` | SSE stream for updates |
+| GET | `/{slug}/api/history` | Get recent callouts |
+| GET | `/{slug}/api/callout/{id}/detail` | Get callout detail |
+
+### Admin Endpoints (Admin Auth Required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST | `/{slug}/admin/api/members` | List/create members |
+| PUT/DELETE | `/{slug}/admin/api/members/{id}` | Update/delete member |
+| POST | `/{slug}/admin/api/members/import` | CSV import |
+| GET/POST | `/{slug}/admin/api/trucks` | List/create trucks |
+| PUT/DELETE | `/{slug}/admin/api/trucks/{id}` | Update/delete truck |
+| GET/PUT | `/{slug}/admin/api/settings` | Brigade settings |
+| GET | `/{slug}/admin/api/audit` | Audit log entries |
+
+---
 
 ## Troubleshooting
 
@@ -260,6 +558,13 @@ Access admin at `/{brigade-slug}/admin`:
 ### Slow performance
 - The built-in PHP server is single-threaded; use Apache/nginx in production
 - SSE connections may block on PHP dev server
+
+### Service Worker issues
+- Clear browser cache and unregister old service workers
+- Check browser DevTools > Application > Service Workers
+- Ensure HTTPS is enabled (required for PWA)
+
+---
 
 ## License
 
