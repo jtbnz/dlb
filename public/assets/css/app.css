@@ -425,6 +425,10 @@ input:focus, select:focus, textarea:focus {
     .no-callout .form-row {
         flex-direction: column;
     }
+    .no-callout .form-row input {
+        width: 100%;
+        flex: none;
+    }
     .no-callout input[type="datetime-local"] {
         width: 100%;
     }

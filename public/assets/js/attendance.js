@@ -359,12 +359,10 @@
 
     function updateSyncStatus(status) {
         elements.syncStatus.className = 'sync-status ' + status;
+        // Only show the colored dot icon, no text
         const statusText = elements.syncStatus.querySelector('.status-text');
-
-        switch (status) {
-            case 'connected': statusText.textContent = 'Connected'; break;
-            case 'connecting': statusText.textContent = 'Connecting...'; break;
-            case 'offline': statusText.textContent = 'Offline'; break;
+        if (statusText) {
+            statusText.style.display = 'none';
         }
     }
 
