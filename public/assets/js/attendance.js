@@ -10,7 +10,8 @@
         selectedMember: null,
         eventSource: null,
         isProcessing: false,
-        calloutsThisYear: 0
+        calloutsThisYear: 0,
+        lastCallout: null
     };
 
     // DOM Elements
@@ -50,6 +51,7 @@
             state.trucks = data.trucks || [];
             state.members = data.members || [];
             state.calloutsThisYear = data.callouts_this_year || 0;
+            state.lastCallout = data.last_callout || null;
 
             if (data.callout) {
                 state.callout = data.callout;
@@ -393,10 +395,14 @@
             datetimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
         }
 
-        // Display callouts this year count
+        // Display callouts this year count and last callout
         const countElement = document.getElementById('callouts-this-year');
         if (countElement) {
-            countElement.textContent = `Callouts this year: ${state.calloutsThisYear}`;
+            let info = `Callouts this year: ${state.calloutsThisYear}`;
+            if (state.lastCallout) {
+                info += ` | Last Callout: ${state.lastCallout.icad_number}`;
+            }
+            countElement.textContent = info;
         }
 
         // Show history panel and set correct URL

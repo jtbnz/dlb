@@ -34,11 +34,17 @@ class AttendanceController
             $callout['available_members'] = Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder);
         }
 
+        $lastCallout = Callout::findLastSubmitted($brigade['id']);
+
         json_response([
             'callout' => $callout,
             'trucks' => Truck::findByBrigadeWithPositions($brigade['id']),
             'members' => Member::findByBrigadeOrdered($brigade['id'], $memberOrder),
             'callouts_this_year' => Callout::countForYear($brigade['id']),
+            'last_callout' => $lastCallout ? [
+                'icad_number' => $lastCallout['icad_number'],
+                'created_at' => $lastCallout['created_at'],
+            ] : null,
         ]);
     }
 
