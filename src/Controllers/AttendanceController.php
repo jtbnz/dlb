@@ -67,6 +67,25 @@ class AttendanceController
             return;
         }
 
+        // Sanitize inputs to prevent XSS
+        $icadNumber = htmlspecialchars($icadNumber, ENT_QUOTES, 'UTF-8');
+        $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
+        $callType = htmlspecialchars($callType, ENT_QUOTES, 'UTF-8');
+
+        // Limit input lengths
+        if (strlen($icadNumber) > 50) {
+            json_response(['error' => 'ICAD number too long'], 400);
+            return;
+        }
+        if (strlen($location) > 200) {
+            json_response(['error' => 'Location too long'], 400);
+            return;
+        }
+        if (strlen($callType) > 100) {
+            json_response(['error' => 'Call type too long'], 400);
+            return;
+        }
+
         // Validate ICAD format: must start with F (case-insensitive) or be "muster"
         $isMuster = strtolower($icadNumber) === 'muster';
         $startsWithF = strtoupper(substr($icadNumber, 0, 1)) === 'F';

@@ -31,7 +31,9 @@ return [
     ],
     'super_admin' => [
         'username' => 'superadmin',           // Change this!
-        'password' => 'changeme123',          // Change this immediately!
+        'password' => 'changeme123',          // Change this immediately! For better security, use password_hash() output
+        // Example hashed password: password_hash('your-secure-password', PASSWORD_DEFAULT)
+        // 'password' => '$2y$10$...',        // Use hashed password for production
     ],
     'email' => [
         'driver' => 'mail',  // smtp, sendmail, mail

@@ -265,9 +265,15 @@ class Database
         CREATE INDEX IF NOT EXISTS idx_trucks_brigade ON trucks(brigade_id);
         CREATE INDEX IF NOT EXISTS idx_positions_truck ON positions(truck_id);
         CREATE INDEX IF NOT EXISTS idx_members_brigade ON members(brigade_id);
+        CREATE INDEX IF NOT EXISTS idx_members_active ON members(brigade_id, is_active);
         CREATE INDEX IF NOT EXISTS idx_callouts_brigade ON callouts(brigade_id);
+        CREATE INDEX IF NOT EXISTS idx_callouts_status ON callouts(brigade_id, status);
+        CREATE INDEX IF NOT EXISTS idx_callouts_icad ON callouts(brigade_id, icad_number);
         CREATE INDEX IF NOT EXISTS idx_attendance_callout ON attendance(callout_id);
+        CREATE INDEX IF NOT EXISTS idx_attendance_member ON attendance(member_id);
         CREATE INDEX IF NOT EXISTS idx_audit_brigade ON audit_log(brigade_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+        CREATE INDEX IF NOT EXISTS idx_rate_limits_identifier ON rate_limits(identifier);
         SQL;
 
         $this->pdo->exec($schema);

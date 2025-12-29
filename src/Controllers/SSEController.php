@@ -14,6 +14,12 @@ class SSEController
         $brigade = PinAuth::requireAuth($slug);
         $memberOrder = Brigade::getMemberOrder($brigade);
 
+        // Validate callout ID is numeric to prevent directory traversal
+        if (!is_numeric($calloutId) || (int)$calloutId <= 0) {
+            http_response_code(400);
+            return;
+        }
+
         $callout = Callout::findById((int)$calloutId);
         if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
             http_response_code(404);
