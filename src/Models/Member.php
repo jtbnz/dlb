@@ -13,9 +13,9 @@ class Member
         'SFF' => 5,
         'QFF' => 6,
         'FF' => 7,
-        'RFF' => 8,   // Recruit Firefighter
-        'RCFF' => 8,  // Also Recruit Firefighter (alternate abbreviation)
-        'PFF' => 8,   // Probationary Firefighter
+        'RFF' => 8,   // Rural Firefighter
+        'RCFF' => 8,  // Recruit Firefighter 
+
         'OS' => 9,
     ];
 

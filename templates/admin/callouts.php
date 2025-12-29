@@ -198,12 +198,11 @@ function renderCalloutDetails() {
         <p><strong>Status:</strong> <span class="status-badge status-${callout.status}">${callout.status}</span></p>
         <p><strong>Created:</strong> ${formatDate(callout.created_at)}</p>
         ${callout.submitted_at ? `<p><strong>Submitted:</strong> ${formatDate(callout.submitted_at)} by ${escapeHtml(callout.submitted_by || 'Unknown')}</p>` : ''}
-        <p><a href="https://sitrep.fireandemergency.nz/report/${encodeURIComponent(callout.icad_number)}" target="_blank">View ICAD Report</a></p>
         <hr>
         <div class="callout-edit-header">
             <h3>Incident Details</h3>
             <button class="btn btn-small" onclick="showEditInfoModal()">Edit</button>
-            ${callout.icad_number.startsWith('F') ? `<button class="btn btn-small btn-primary" onclick="fetchFromFenz()">Fetch from FENZ</button>` : ''}
+            <a href="https://sitrep.fireandemergency.nz/report/${encodeURIComponent(callout.icad_number)}" target="_blank" class="btn btn-small btn-primary">ICAD Report</a>
         </div>
         <div class="incident-info">
             <p><strong>Location:</strong> ${escapeHtml(callout.location) || '<em>Not set</em>'}</p>
@@ -412,33 +411,6 @@ async function saveCalloutInfo() {
     } catch (error) {
         alert('Failed to save incident details');
     }
-}
-
-async function fetchFromFenz() {
-    const icad = currentCallout.icad_number;
-    if (!icad || !icad.startsWith('F')) {
-        alert('Invalid ICAD number for FENZ lookup');
-        return;
-    }
-
-    // Determine which day to check based on callout date
-    const calloutDate = new Date(currentCallout.created_at);
-    const dayName = calloutDate.toLocaleDateString('en-NZ', { weekday: 'long' });
-
-    // Open in new window so user's browser can handle Incapsula
-    const fenzUrl = `https://www.fireandemergency.nz/incidents-and-news/incident-reports/incidents/?region=1&day=${dayName}`;
-
-    const instructions = `To fetch FENZ data for ${icad}:
-
-1. A new window will open with the FENZ incident reports page
-2. Find the incident with number "${icad}"
-3. Copy the Location, Duration, and Call Type values
-4. Close the FENZ window and click "Edit" to enter the values manually
-
-Note: Due to FENZ website security, automatic fetching is not possible.`;
-
-    alert(instructions);
-    window.open(fenzUrl, '_blank');
 }
 
 function updateMovePositionSelect() {

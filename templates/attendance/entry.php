@@ -48,9 +48,15 @@ $content = <<<HTML
         <p id="callouts-this-year" class="callouts-count"></p>
     </div>
 
+    <div id="recent-calls-section" class="recent-calls-section" style="display:none;">
+        <h2>Recent Calls</h2>
+        <div id="recent-calls-list" class="recent-calls-list">
+            <!-- Recent calls loaded via JS -->
+        </div>
+    </div>
+
     <div id="history-panel" class="history-panel" style="display:none;">
-        <h2>History</h2>
-        <a href="HISTORY_URL_PLACEHOLDER" id="history-link" class="btn btn-secondary">Browse Recent Callouts</a>
+        <a href="HISTORY_URL_PLACEHOLDER" id="history-link" class="btn btn-secondary">Browse All Recent Callouts</a>
     </div>
 
     <div id="attendance-area" class="attendance-area" style="display:none;">

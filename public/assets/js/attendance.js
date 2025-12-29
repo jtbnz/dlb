@@ -620,6 +620,8 @@
         elements.attendanceArea.style.display = 'none';
         const historyPanel = document.getElementById('history-panel');
         if (historyPanel) historyPanel.style.display = 'none';
+        const recentCallsSection = document.getElementById('recent-calls-section');
+        if (recentCallsSection) recentCallsSection.style.display = 'none';
     }
 
     function showNoCallout() {
@@ -651,7 +653,7 @@
             countElement.textContent = info;
         }
 
-        // Show history panel and set correct URL
+        // Show recent calls and history panel, set correct URL
         const historyPanel = document.getElementById('history-panel');
         const historyLink = document.getElementById('history-link');
         if (historyPanel) {
@@ -660,6 +662,80 @@
         if (historyLink) {
             historyLink.href = `${BASE}/${SLUG}/history`;
         }
+
+        // Load recent calls
+        loadRecentCalls();
+    }
+
+    async function loadRecentCalls() {
+        const recentCallsSection = document.getElementById('recent-calls-section');
+        const recentCallsList = document.getElementById('recent-calls-list');
+        if (!recentCallsSection || !recentCallsList) return;
+
+        try {
+            const response = await fetch(`${BASE}/${SLUG}/api/history`);
+            const data = await response.json();
+
+            if (!data.callouts || data.callouts.length === 0) {
+                recentCallsSection.style.display = 'none';
+                return;
+            }
+
+            // Take only the 3 most recent calls
+            const recentCalls = data.callouts.slice(0, 3);
+            renderRecentCalls(recentCalls);
+            recentCallsSection.style.display = 'block';
+        } catch (error) {
+            console.error('Failed to load recent calls:', error);
+            recentCallsSection.style.display = 'none';
+        }
+    }
+
+    function formatNZDate(dateString) {
+        // Database stores UTC time, append Z to parse as UTC
+        const date = new Date(dateString.replace(' ', 'T') + 'Z');
+        return {
+            dateStr: date.toLocaleDateString('en-NZ', { timeZone: 'Pacific/Auckland', weekday: 'short', day: 'numeric', month: 'short' }),
+            timeStr: date.toLocaleTimeString('en-NZ', { timeZone: 'Pacific/Auckland', hour: '2-digit', minute: '2-digit' })
+        };
+    }
+
+    function renderTruckBadges(truckCrews) {
+        if (!truckCrews || Object.keys(truckCrews).length === 0) {
+            return '<span class="truck-badge">0 crew</span>';
+        }
+        return Object.entries(truckCrews)
+            .map(([truck, count]) => `<span class="truck-badge">${escapeHtml(truck)}: ${count}</span>`)
+            .join('');
+    }
+
+    function renderRecentCalls(callouts) {
+        const container = document.getElementById('recent-calls-list');
+        if (!container) return;
+
+        container.innerHTML = callouts.map(c => {
+            const { dateStr, timeStr } = formatNZDate(c.created_at);
+
+            const location = c.location || 'Location pending...';
+            const callType = c.call_type || '';
+            const duration = c.duration || '';
+
+            return `
+                <div class="callout-card" onclick="window.location.href='${BASE}/${SLUG}/history'">
+                    <div class="callout-header">
+                        <span class="icad-number">${escapeHtml(c.icad_number)}</span>
+                        <div class="truck-badges">${renderTruckBadges(c.truck_crews)}</div>
+                    </div>
+                    <div class="callout-meta">
+                        <span class="date">${dateStr}</span>
+                        <span class="time">${timeStr}</span>
+                        ${duration ? `<span class="duration">${escapeHtml(duration)}</span>` : ''}
+                    </div>
+                    ${callType ? `<div class="call-type">${escapeHtml(callType)}</div>` : ''}
+                    <div class="location">${escapeHtml(location)}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     function showAttendanceArea() {
@@ -668,6 +744,8 @@
         elements.attendanceArea.style.display = 'flex';
         const historyPanel = document.getElementById('history-panel');
         if (historyPanel) historyPanel.style.display = 'none';
+        const recentCallsSection = document.getElementById('recent-calls-section');
+        if (recentCallsSection) recentCallsSection.style.display = 'none';
 
         // Show tabs if there are multiple callouts
         if (elements.calloutTabs) {
