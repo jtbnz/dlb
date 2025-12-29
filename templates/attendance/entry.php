@@ -24,6 +24,14 @@ $content = <<<HTML
         </div>
     </header>
 
+    <!-- Tab bar for multiple active callouts -->
+    <div id="callout-tabs" class="callout-tabs" style="display:none;">
+        <div class="tabs-container">
+            <div id="tabs-list" class="tabs-list"></div>
+            <button type="button" class="tab-button new-callout-tab" onclick="showNewCalloutModal()">+ New</button>
+        </div>
+    </div>
+
     <div id="no-callout" class="no-callout" style="display:none;">
         <h2>Start New Callout</h2>
         <form id="new-callout-form">
@@ -96,6 +104,31 @@ $content = <<<HTML
             <button type="button" class="btn" onclick="closeSubmitModal()">Cancel</button>
             <button type="button" class="btn btn-success" onclick="confirmSubmit()">Submit</button>
         </div>
+    </div>
+</div>
+
+<!-- New Callout Modal (for adding while others are active) -->
+<div id="new-callout-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h2>Add New Callout</h2>
+        <form id="modal-new-callout-form" onsubmit="handleModalNewCallout(event)">
+            <div class="form-group">
+                <input type="text" id="modal-new-icad" placeholder="ICAD Number (e.g., F4363832)" required>
+            </div>
+            <div class="form-group">
+                <input type="datetime-local" id="modal-new-datetime" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="modal-new-location" placeholder="Address / Location">
+            </div>
+            <div class="form-group">
+                <input type="text" id="modal-new-call-type" placeholder="Call Type (e.g., Structure Fire)">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn" onclick="closeNewCalloutModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Start Callout</button>
+            </div>
+        </form>
     </div>
 </div>
 HTML;

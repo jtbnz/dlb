@@ -17,6 +17,14 @@ class Callout
         );
     }
 
+    public static function findAllActive(int $brigadeId): array
+    {
+        return db()->query(
+            "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'active' ORDER BY created_at ASC",
+            [$brigadeId]
+        );
+    }
+
     public static function findByIcadNumber(int $brigadeId, string $icadNumber): ?array
     {
         return db()->queryOne(

@@ -3,16 +3,33 @@
     const SLUG = window.BRIGADE_SLUG;
     const BASE = window.BASE_PATH || '';
     let state = {
-        callout: null,
+        callouts: [],                    // Array of all active callouts
+        activeCalloutId: null,           // Currently selected tab
         trucks: [],
         members: [],
-        availableMembers: [],
+        availableMembersPerCallout: {},  // Map: calloutId -> members[]
         selectedMember: null,
-        eventSource: null,
+        eventSources: {},                // Map: calloutId -> EventSource
         isProcessing: false,
         calloutsThisYear: 0,
         lastCallout: null
     };
+
+    // Helper functions for multi-callout support
+    function getActiveCallout() {
+        return state.callouts.find(c => c.id === state.activeCalloutId) || null;
+    }
+
+    function getActiveAvailableMembers() {
+        return state.availableMembersPerCallout[state.activeCalloutId] || [];
+    }
+
+    function switchToCallout(calloutId) {
+        state.activeCalloutId = calloutId;
+        state.selectedMember = null;
+        render();
+        updateHeaderForActiveCallout();
+    }
 
     // DOM Elements
     const elements = {
@@ -31,7 +48,9 @@
         syncStatus: document.getElementById('sync-status'),
         newCalloutForm: document.getElementById('new-callout-form'),
         icadModal: document.getElementById('icad-modal'),
-        submitModal: document.getElementById('submit-modal')
+        submitModal: document.getElementById('submit-modal'),
+        calloutTabs: document.getElementById('callout-tabs'),
+        tabsList: document.getElementById('tabs-list')
     };
 
     // Initialize
@@ -53,12 +72,25 @@
             state.calloutsThisYear = data.callouts_this_year || 0;
             state.lastCallout = data.last_callout || null;
 
-            if (data.callout) {
-                state.callout = data.callout;
-                state.availableMembers = data.callout.available_members || [];
+            // Handle array of callouts
+            const callouts = data.callouts || [];
+            state.callouts = callouts;
+
+            // Build available members map for each callout
+            state.availableMembersPerCallout = {};
+            callouts.forEach(callout => {
+                state.availableMembersPerCallout[callout.id] = callout.available_members || [];
+            });
+
+            if (callouts.length > 0) {
+                // Set active callout to first one if not already set
+                if (!state.activeCalloutId || !callouts.find(c => c.id === state.activeCalloutId)) {
+                    state.activeCalloutId = callouts[0].id;
+                }
                 showAttendanceArea();
-                connectSSE();
+                connectAllSSE();
             } else {
+                state.activeCalloutId = null;
                 showNoCallout();
             }
         } catch (error) {
@@ -117,10 +149,20 @@
                 return;
             }
 
-            state.callout = data.callout;
-            state.availableMembers = data.callout.available_members || state.members;
+            // Add new callout to state
+            const newCallout = data.callout;
+            state.callouts.push(newCallout);
+            state.availableMembersPerCallout[newCallout.id] = newCallout.available_members || state.members;
+            state.activeCalloutId = newCallout.id;
+
+            // Clear the form
+            document.getElementById('new-icad').value = '';
+
+            // Close modal if open (for adding callout while others active)
+            closeNewCalloutModal();
+
             showAttendanceArea();
-            connectSSE();
+            connectSSEForCallout(newCallout.id);
         } catch (error) {
             console.error('Failed to create callout:', error);
             alert('Failed to create callout. Please try again.');
@@ -128,7 +170,9 @@
     }
 
     function showIcadModal() {
-        document.getElementById('modal-icad').value = state.callout.icad_number;
+        const callout = getActiveCallout();
+        if (!callout) return;
+        document.getElementById('modal-icad').value = callout.icad_number;
         elements.icadModal.style.display = 'flex';
     }
 
@@ -138,18 +182,22 @@
 
     async function handleChangeIcad(e) {
         e.preventDefault();
+        const callout = getActiveCallout();
+        if (!callout) return;
+
         const newIcad = document.getElementById('modal-icad').value.trim();
         if (!newIcad) return;
 
         try {
-            await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}`, {
+            await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ icad_number: newIcad })
             });
 
-            state.callout.icad_number = newIcad;
+            callout.icad_number = newIcad;
             elements.icadNumber.textContent = newIcad;
+            renderTabs();
             closeIcadModal();
         } catch (error) {
             console.error('Failed to update ICAD:', error);
@@ -158,7 +206,8 @@
     }
 
     async function handleCopyLastCall() {
-        if (!state.callout || state.callout.status !== 'active') return;
+        const callout = getActiveCallout();
+        if (!callout || callout.status !== 'active') return;
 
         if (!confirm('Copy attendance from the last submitted callout? This will add all members from that call to this one.')) {
             return;
@@ -168,7 +217,7 @@
         elements.copyLastBtn.textContent = 'Copying...';
 
         try {
-            const response = await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}/copy-last`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}/copy-last`, {
                 method: 'POST'
             });
 
@@ -181,10 +230,10 @@
 
             // Update state with new attendance
             if (data.attendance) {
-                state.callout.attendance = data.attendance;
+                callout.attendance = data.attendance;
             }
             if (data.available_members) {
-                state.availableMembers = data.available_members;
+                state.availableMembersPerCallout[callout.id] = data.available_members;
             }
 
             render();
@@ -199,11 +248,30 @@
     }
 
     function handleClose() {
-        // Reset state and go back to new callout entry
-        state.callout = null;
-        state.availableMembers = [];
-        showNoCallout();
-        document.getElementById('new-icad').value = '';
+        const calloutId = state.activeCalloutId;
+        if (!calloutId) return;
+
+        // Close SSE for this callout
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
+        }
+
+        // Remove callout from state
+        state.callouts = state.callouts.filter(c => c.id !== calloutId);
+        delete state.availableMembersPerCallout[calloutId];
+
+        // If there are remaining callouts, switch to the first one
+        if (state.callouts.length > 0) {
+            state.activeCalloutId = state.callouts[0].id;
+            render();
+            updateHeaderForActiveCallout();
+        } else {
+            // No more callouts, show the new callout form
+            state.activeCalloutId = null;
+            showNoCallout();
+            document.getElementById('new-icad').value = '';
+        }
     }
 
     function showSubmitModal() {
@@ -214,16 +282,111 @@
         elements.submitModal.style.display = 'none';
     };
 
-    window.confirmSubmit = async function() {
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
+    // New callout modal (for adding callout while others are active)
+    window.showNewCalloutModal = function() {
+        const modal = document.getElementById('new-callout-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            // Pre-populate date/time
+            const datetimeInput = document.getElementById('modal-new-datetime');
+            if (datetimeInput && !datetimeInput.value) {
+                const now = new Date();
+                const nzTime = new Date(now.toLocaleString('en-US', { timeZone: 'Pacific/Auckland' }));
+                const year = nzTime.getFullYear();
+                const month = String(nzTime.getMonth() + 1).padStart(2, '0');
+                const day = String(nzTime.getDate()).padStart(2, '0');
+                const hours = String(nzTime.getHours()).padStart(2, '0');
+                const minutes = String(nzTime.getMinutes()).padStart(2, '0');
+                datetimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+        }
+    };
+
+    function closeNewCalloutModal() {
+        const modal = document.getElementById('new-callout-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            // Clear form
+            const icadInput = document.getElementById('modal-new-icad');
+            if (icadInput) icadInput.value = '';
+            const locationInput = document.getElementById('modal-new-location');
+            if (locationInput) locationInput.value = '';
+            const callTypeInput = document.getElementById('modal-new-call-type');
+            if (callTypeInput) callTypeInput.value = '';
+        }
+    }
+    window.closeNewCalloutModal = closeNewCalloutModal;
+
+    // Handle new callout from modal
+    window.handleModalNewCallout = async function(e) {
+        e.preventDefault();
+        const icadNumber = document.getElementById('modal-new-icad').value.trim();
+        const callDateTime = document.getElementById('modal-new-datetime').value;
+        const location = document.getElementById('modal-new-location').value.trim();
+        const callType = document.getElementById('modal-new-call-type').value.trim();
+
+        if (!icadNumber) {
+            alert('Please enter an ICAD number');
+            return;
         }
 
-        state.callout.status = 'submitted';
+        try {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    icad_number: icadNumber,
+                    call_datetime: callDateTime,
+                    location: location,
+                    call_type: callType
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            if (data.already_submitted) {
+                const submittedDate = new Date(data.submitted_at).toLocaleString();
+                alert(`This callout (${data.icad_number}) has already been submitted on ${submittedDate}.`);
+                document.getElementById('modal-new-icad').value = '';
+                return;
+            }
+
+            // Add new callout to state
+            const newCallout = data.callout;
+            state.callouts.push(newCallout);
+            state.availableMembersPerCallout[newCallout.id] = newCallout.available_members || state.members;
+            state.activeCalloutId = newCallout.id;
+
+            closeNewCalloutModal();
+            showAttendanceArea();
+            connectSSEForCallout(newCallout.id);
+        } catch (error) {
+            console.error('Failed to create callout:', error);
+            alert('Failed to create callout. Please try again.');
+        }
+    };
+
+    window.confirmSubmit = async function() {
+        const callout = getActiveCallout();
+        if (!callout) return;
+
+        const calloutId = callout.id;
+
+        // Close SSE for this callout
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
+        }
+
+        callout.status = 'submitted';
 
         try {
-            const response = await fetch(`${BASE}/${SLUG}/api/callout/${state.callout.id}/submit`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${calloutId}/submit`, {
                 method: 'POST'
             });
 
@@ -231,7 +394,7 @@
                 const text = await response.text();
                 console.error('Server error:', text);
                 alert('Failed to submit: Server error. Please try again.');
-                state.callout.status = 'active';
+                callout.status = 'active';
                 return;
             }
 
@@ -239,24 +402,30 @@
 
             if (data.error) {
                 alert(data.error);
-                state.callout.status = 'active';
+                callout.status = 'active';
                 return;
             }
 
             closeSubmitModal();
 
-            // Close SSE connection
-            if (state.eventSource) {
-                state.eventSource.close();
-                state.eventSource = null;
-            }
+            // Remove this callout from state
+            state.callouts = state.callouts.filter(c => c.id !== calloutId);
+            delete state.availableMembersPerCallout[calloutId];
 
-            // Show submitted state
-            showSubmittedState();
+            // If there are remaining callouts, switch to the first one
+            if (state.callouts.length > 0) {
+                state.activeCalloutId = state.callouts[0].id;
+                render();
+                updateHeaderForActiveCallout();
+            } else {
+                // No more callouts, show the new callout form
+                state.activeCalloutId = null;
+                showNoCallout();
+            }
         } catch (error) {
             console.error('Failed to submit:', error);
             alert('Failed to submit attendance. Please try again.');
-            state.callout.status = 'active';
+            callout.status = 'active';
         }
     };
 
@@ -286,60 +455,120 @@
         updateSyncStatus('offline');
     }
 
-    function connectSSE() {
-        // Don't connect if already submitted
-        if (state.callout.status === 'submitted') {
-            updateSyncStatus('offline');
+    // Connect SSE for all active callouts
+    function connectAllSSE() {
+        state.callouts.forEach(callout => {
+            if (callout.status === 'active') {
+                connectSSEForCallout(callout.id);
+            }
+        });
+        updateSyncStatus('connected');
+    }
+
+    // Connect SSE for a specific callout
+    function connectSSEForCallout(calloutId) {
+        const callout = state.callouts.find(c => c.id === calloutId);
+        if (!callout || callout.status === 'submitted') {
             return;
         }
 
-        if (state.eventSource) {
-            state.eventSource.close();
+        // Close existing connection for this callout
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
         }
 
-        updateSyncStatus('connecting');
-        state.eventSource = new EventSource(`${BASE}/${SLUG}/api/sse/callout/${state.callout.id}`);
+        const eventSource = new EventSource(`${BASE}/${SLUG}/api/sse/callout/${calloutId}`);
+        state.eventSources[calloutId] = eventSource;
 
-        state.eventSource.addEventListener('connected', () => {
+        eventSource.addEventListener('connected', () => {
             updateSyncStatus('connected');
         });
 
-        state.eventSource.addEventListener('update', (event) => {
+        eventSource.addEventListener('update', (event) => {
             const data = JSON.parse(event.data);
-            handleRemoteUpdate(data);
+            handleRemoteUpdateForCallout(calloutId, data);
         });
 
-        state.eventSource.addEventListener('submitted', () => {
-            // Close connection immediately
-            if (state.eventSource) {
-                state.eventSource.close();
-                state.eventSource = null;
-            }
+        eventSource.addEventListener('submitted', () => {
+            // Another user submitted this callout
+            handleCalloutSubmittedRemotely(calloutId);
+        });
 
-            // Only alert if we didn't submit it ourselves
-            if (state.callout.status !== 'submitted') {
-                state.callout.status = 'submitted';
-                elements.submitBtn.disabled = true;
-                elements.submitBtn.textContent = 'Submitted';
-                disableEditing();
-                alert('This callout has been submitted by another user.');
+        eventSource.addEventListener('reconnect', () => {
+            const currentCallout = state.callouts.find(c => c.id === calloutId);
+            if (currentCallout && currentCallout.status !== 'submitted') {
+                setTimeout(() => connectSSEForCallout(calloutId), 1000);
             }
         });
 
-        state.eventSource.addEventListener('reconnect', () => {
-            // Only reconnect if not submitted
-            if (state.callout.status !== 'submitted') {
-                setTimeout(connectSSE, 1000);
-            }
-        });
-
-        state.eventSource.onerror = () => {
+        eventSource.onerror = () => {
             updateSyncStatus('offline');
-            // Only reconnect if not submitted
-            if (state.callout.status !== 'submitted') {
-                setTimeout(connectSSE, 3000);
+            const currentCallout = state.callouts.find(c => c.id === calloutId);
+            if (currentCallout && currentCallout.status !== 'submitted') {
+                setTimeout(() => connectSSEForCallout(calloutId), 3000);
             }
         };
+    }
+
+    // Handle remote update for a specific callout
+    function handleRemoteUpdateForCallout(calloutId, data) {
+        const callout = state.callouts.find(c => c.id === calloutId);
+        if (!callout) return;
+
+        if (data.attendance) {
+            callout.attendance = data.attendance;
+        }
+        if (data.available_members) {
+            state.availableMembersPerCallout[calloutId] = data.available_members;
+        }
+
+        // Only re-render if this is the active callout
+        if (calloutId === state.activeCalloutId) {
+            render();
+        } else {
+            // Update tab badge count
+            renderTabs();
+        }
+    }
+
+    // Handle when another user submits a callout
+    function handleCalloutSubmittedRemotely(calloutId) {
+        // Close SSE connection
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
+        }
+
+        // Remove from state
+        state.callouts = state.callouts.filter(c => c.id !== calloutId);
+        delete state.availableMembersPerCallout[calloutId];
+
+        // If this was the active callout, switch to another
+        if (calloutId === state.activeCalloutId) {
+            if (state.callouts.length > 0) {
+                state.activeCalloutId = state.callouts[0].id;
+                render();
+                updateHeaderForActiveCallout();
+                alert('This callout has been submitted by another user.');
+            } else {
+                state.activeCalloutId = null;
+                showNoCallout();
+                alert('This callout has been submitted by another user.');
+            }
+        } else {
+            // Just update tabs
+            renderTabs();
+        }
+    }
+
+    // Close all SSE connections
+    function closeAllSSE() {
+        Object.keys(state.eventSources).forEach(calloutId => {
+            if (state.eventSources[calloutId]) {
+                state.eventSources[calloutId].close();
+            }
+        });
+        state.eventSources = {};
     }
 
     function disableEditing() {
@@ -349,15 +578,6 @@
         });
     }
 
-    function handleRemoteUpdate(data) {
-        if (data.attendance) {
-            state.callout.attendance = data.attendance;
-        }
-        if (data.available_members) {
-            state.availableMembers = data.available_members;
-        }
-        render();
-    }
 
     function updateSyncStatus(status) {
         elements.syncStatus.className = 'sync-status ' + status;
@@ -423,11 +643,24 @@
         const historyPanel = document.getElementById('history-panel');
         if (historyPanel) historyPanel.style.display = 'none';
 
-        // Display the ICAD number (Muster-YYYY-MM-DD will show as stored)
-        elements.icadNumber.textContent = state.callout.icad_number;
+        // Show tabs if there are multiple callouts
+        if (elements.calloutTabs) {
+            elements.calloutTabs.style.display = state.callouts.length > 0 ? 'block' : 'none';
+        }
+
+        updateHeaderForActiveCallout();
+        render();
+    }
+
+    function updateHeaderForActiveCallout() {
+        const callout = getActiveCallout();
+        if (!callout) return;
+
+        // Display the ICAD number
+        elements.icadNumber.textContent = callout.icad_number;
 
         // Check if already submitted
-        if (state.callout.status === 'submitted') {
+        if (callout.status === 'submitted') {
             showSubmittedState();
         } else {
             // Show active state controls
@@ -440,8 +673,6 @@
             elements.submittedTime.style.display = 'none';
             elements.closeBtn.style.display = 'none';
         }
-
-        render();
     }
 
     function showError(message) {
@@ -449,19 +680,66 @@
     }
 
     function render() {
+        renderTabs();
         renderTrucks();
         renderAvailableMembers();
     }
 
+    // Render the tab bar for multiple callouts
+    function renderTabs() {
+        if (!elements.tabsList) return;
+
+        // Count members per callout
+        const countMembers = (callout) => {
+            let count = 0;
+            if (callout.attendance) {
+                callout.attendance.forEach(truck => {
+                    if (truck.positions) {
+                        Object.values(truck.positions).forEach(pos => {
+                            if (pos.members) {
+                                count += pos.members.length;
+                            }
+                        });
+                    }
+                });
+            }
+            return count;
+        };
+
+        elements.tabsList.innerHTML = state.callouts.map(callout => {
+            const isActive = callout.id === state.activeCalloutId;
+            const memberCount = countMembers(callout);
+            return `
+                <button class="tab-button ${isActive ? 'active' : ''}"
+                        onclick="window.switchToCallout(${callout.id})">
+                    <span class="tab-icad">${escapeHtml(callout.icad_number)}</span>
+                    <span class="tab-count">(${memberCount})</span>
+                </button>
+            `;
+        }).join('');
+    }
+
+    // Expose switchToCallout globally
+    window.switchToCallout = function(calloutId) {
+        switchToCallout(calloutId);
+    };
+
     // Check if this is a muster (case-insensitive, also matches "Muster-YYYY-MM-DD")
     function isMuster() {
-        if (!state.callout) return false;
-        const icad = state.callout.icad_number.toLowerCase();
+        const callout = getActiveCallout();
+        if (!callout) return false;
+        const icad = callout.icad_number.toLowerCase();
         return icad === 'muster' || icad.startsWith('muster-');
     }
 
     function renderTrucks() {
-        const attendance = state.callout.attendance || [];
+        const callout = getActiveCallout();
+        if (!callout) {
+            elements.trucksContainer.innerHTML = '';
+            return;
+        }
+
+        const attendance = callout.attendance || [];
         const attendanceMap = new Map();
 
         attendance.forEach(truck => {
@@ -548,12 +826,14 @@
     }
 
     function renderAvailableMembers() {
+        const availableMembers = getActiveAvailableMembers();
+
         // Update count badge
         if (elements.memberCount) {
-            elements.memberCount.textContent = state.availableMembers.length;
+            elements.memberCount.textContent = availableMembers.length;
         }
 
-        elements.availableMembers.innerHTML = state.availableMembers.map(member => `
+        elements.availableMembers.innerHTML = availableMembers.map(member => `
             <div class="member-chip ${state.selectedMember === member.id ? 'selected' : ''}"
                  data-member-id="${member.id}"
                  onclick="selectMember(${member.id})">
@@ -599,12 +879,21 @@
         if (state.isProcessing) return;
         state.isProcessing = true;
 
+        const callout = getActiveCallout();
+        if (!callout) {
+            state.isProcessing = false;
+            return;
+        }
+
+        const calloutId = callout.id;
+
         // Get member info for optimistic update
-        const member = state.availableMembers.find(m => m.id === memberId);
+        const availableMembers = getActiveAvailableMembers();
+        const member = availableMembers.find(m => m.id === memberId);
         const memberName = member ? (member.display_name || member.name) : 'Assigning...';
 
         // Optimistic UI update - immediately show assignment
-        state.availableMembers = state.availableMembers.filter(m => m.id !== memberId);
+        state.availableMembersPerCallout[calloutId] = availableMembers.filter(m => m.id !== memberId);
         state.selectedMember = null;
         renderAvailableMembers();
 
@@ -616,10 +905,10 @@
             slot.style.pointerEvents = 'none'; // Prevent clicks during save
         }
 
-        // Temporarily close SSE to prevent blocking (PHP single-threaded issue)
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
+        // Temporarily close SSE for this callout to prevent blocking (PHP single-threaded issue)
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
         }
 
         try {
@@ -627,7 +916,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    callout_id: state.callout.id,
+                    callout_id: calloutId,
                     member_id: memberId,
                     truck_id: truckId,
                     position_id: positionId
@@ -638,10 +927,10 @@
 
             // Update from server response
             if (data.attendance) {
-                state.callout.attendance = data.attendance;
+                callout.attendance = data.attendance;
             }
             if (data.available_members) {
-                state.availableMembers = data.available_members;
+                state.availableMembersPerCallout[calloutId] = data.available_members;
             }
 
             if (data.error && response.status !== 409) {
@@ -657,8 +946,9 @@
         } finally {
             state.isProcessing = false;
             // Reconnect SSE after request completes
-            if (state.callout && state.callout.status === 'active') {
-                connectSSE();
+            const currentCallout = state.callouts.find(c => c.id === calloutId);
+            if (currentCallout && currentCallout.status === 'active') {
+                connectSSEForCallout(calloutId);
             }
         }
     }
@@ -667,10 +957,18 @@
         if (state.isProcessing) return;
         state.isProcessing = true;
 
+        const callout = getActiveCallout();
+        if (!callout) {
+            state.isProcessing = false;
+            return;
+        }
+
+        const calloutId = callout.id;
+
         // Find the member being removed for optimistic update
         let removedMember = null;
-        if (state.callout.attendance) {
-            for (const truck of state.callout.attendance) {
+        if (callout.attendance) {
+            for (const truck of callout.attendance) {
                 if (truck.positions) {
                     for (const pos of Object.values(truck.positions)) {
                         if (pos.members) {
@@ -691,9 +989,9 @@
         render();
 
         // Temporarily close SSE to prevent blocking (PHP single-threaded issue)
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
         }
 
         try {
@@ -710,8 +1008,8 @@
                 return;
             }
 
-            state.callout.attendance = data.attendance;
-            state.availableMembers = data.available_members;
+            callout.attendance = data.attendance;
+            state.availableMembersPerCallout[calloutId] = data.available_members;
             render();
         } catch (error) {
             console.error('Failed to remove attendance:', error);
@@ -721,8 +1019,9 @@
         } finally {
             state.isProcessing = false;
             // Reconnect SSE after request completes
-            if (state.callout && state.callout.status === 'active') {
-                connectSSE();
+            const currentCallout = state.callouts.find(c => c.id === calloutId);
+            if (currentCallout && currentCallout.status === 'active') {
+                connectSSEForCallout(calloutId);
             }
         }
     };
@@ -840,7 +1139,8 @@
     // Handle drag start (mouse or touch)
     function handleDragStart(e, memberId, memberName, source, attendanceId) {
         // Don't start drag if callout is submitted
-        if (state.callout && state.callout.status === 'submitted') return;
+        const callout = getActiveCallout();
+        if (callout && callout.status === 'submitted') return;
 
         const touch = e.touches ? e.touches[0] : e;
 
@@ -993,10 +1293,18 @@
         if (state.isProcessing) return;
         state.isProcessing = true;
 
+        const callout = getActiveCallout();
+        if (!callout) {
+            state.isProcessing = false;
+            return;
+        }
+
+        const calloutId = callout.id;
+
         // Temporarily close SSE to prevent blocking
-        if (state.eventSource) {
-            state.eventSource.close();
-            state.eventSource = null;
+        if (state.eventSources[calloutId]) {
+            state.eventSources[calloutId].close();
+            delete state.eventSources[calloutId];
         }
 
         try {
@@ -1014,7 +1322,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    callout_id: state.callout.id,
+                    callout_id: calloutId,
                     member_id: memberId,
                     truck_id: newTruckId,
                     position_id: newPositionId
@@ -1025,10 +1333,10 @@
 
             // Update from server response
             if (data.attendance) {
-                state.callout.attendance = data.attendance;
+                callout.attendance = data.attendance;
             }
             if (data.available_members) {
-                state.availableMembers = data.available_members;
+                state.availableMembersPerCallout[calloutId] = data.available_members;
             }
 
             render();
@@ -1038,8 +1346,9 @@
             await loadData();
         } finally {
             state.isProcessing = false;
-            if (state.callout && state.callout.status === 'active') {
-                connectSSE();
+            const currentCallout = state.callouts.find(c => c.id === calloutId);
+            if (currentCallout && currentCallout.status === 'active') {
+                connectSSEForCallout(calloutId);
             }
         }
     }
@@ -1055,7 +1364,8 @@
                 if (!chip) return;
 
                 const memberId = parseInt(chip.dataset.memberId);
-                const member = state.availableMembers.find(m => m.id === memberId);
+                const availableMembers = getActiveAvailableMembers();
+                const member = availableMembers.find(m => m.id === memberId);
                 if (!member) return;
 
                 handleDragStart(e, memberId, member.display_name || member.name, 'available');
@@ -1067,7 +1377,8 @@
                 if (!chip) return;
 
                 const memberId = parseInt(chip.dataset.memberId);
-                const member = state.availableMembers.find(m => m.id === memberId);
+                const availableMembers = getActiveAvailableMembers();
+                const member = availableMembers.find(m => m.id === memberId);
                 if (!member) return;
 
                 handleDragStart(e, memberId, member.display_name || member.name, 'available');

@@ -1437,3 +1437,102 @@ input:focus, select:focus, textarea:focus {
 .history-page .attendance-member {
     color: var(--gray-900);
 }
+
+/* ===== Callout Tabs (Multiple Active Callouts) ===== */
+.callout-tabs {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    flex-shrink: 0;
+}
+
+.tabs-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+.tabs-list {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.tab-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.tab-button:hover {
+    border-color: var(--primary);
+    background: white;
+}
+
+.tab-button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.tab-button .tab-icad {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.tab-button .tab-count {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.tab-button.active .tab-count {
+    opacity: 0.9;
+}
+
+.tab-button.new-callout-tab {
+    background: white;
+    border: 2px dashed var(--gray-400);
+    color: var(--gray-600);
+    flex-direction: row;
+    min-width: auto;
+    padding: 0.5rem 0.75rem;
+}
+
+.tab-button.new-callout-tab:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+@media (max-width: 640px) {
+    .tab-button {
+        padding: 0.4rem 0.75rem;
+        min-width: 70px;
+    }
+
+    .tab-button .tab-icad {
+        font-size: 0.8rem;
+    }
+
+    .tab-button .tab-count {
+        font-size: 0.65rem;
+    }
+}

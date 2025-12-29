@@ -27,9 +27,11 @@ class AttendanceController
         $brigade = PinAuth::requireAuth($slug);
         $memberOrder = Brigade::getMemberOrder($brigade);
 
-        $callout = Callout::findActive($brigade['id']);
+        // Get ALL active callouts (supports multiple simultaneous callouts)
+        $callouts = Callout::findAllActive($brigade['id']);
 
-        if ($callout) {
+        // Enrich each callout with attendance data
+        foreach ($callouts as &$callout) {
             $callout['attendance'] = Attendance::findByCalloutGrouped($callout['id']);
             $callout['available_members'] = Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder);
         }
@@ -37,7 +39,7 @@ class AttendanceController
         $lastCallout = Callout::findLastSubmitted($brigade['id']);
 
         json_response([
-            'callout' => $callout,
+            'callouts' => $callouts,  // Array of all active callouts
             'trucks' => Truck::findByBrigadeWithPositions($brigade['id']),
             'members' => Member::findByBrigadeOrdered($brigade['id'], $memberOrder),
             'callouts_this_year' => Callout::countForYear($brigade['id']),
@@ -77,13 +79,7 @@ class AttendanceController
             $icadNumber = 'Muster-' . date('Y-m-d');
         }
 
-        // Check for existing active callout (any ICAD)
-        $activeCallout = Callout::findActive($brigade['id']);
-        if ($activeCallout) {
-            json_response(['error' => 'An active callout already exists'], 400);
-            return;
-        }
-
+        // Multiple simultaneous callouts are now allowed
         // Check if this ICAD number has been used before
         $existingCallout = Callout::findByIcadNumber($brigade['id'], $icadNumber);
         if ($existingCallout) {
