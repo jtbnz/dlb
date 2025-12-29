@@ -12,7 +12,8 @@
         eventSources: {},                // Map: calloutId -> EventSource
         isProcessing: false,
         calloutsThisYear: 0,
-        lastCallout: null
+        lastCallout: null,
+        requireSubmitterName: true       // Whether to require submitter name on submit
     };
 
     // Helper functions for multi-callout support
@@ -71,6 +72,7 @@
             state.members = data.members || [];
             state.calloutsThisYear = data.callouts_this_year || 0;
             state.lastCallout = data.last_callout || null;
+            state.requireSubmitterName = data.require_submitter_name !== false;
 
             // Handle array of callouts
             const callouts = data.callouts || [];
@@ -275,6 +277,16 @@
     }
 
     function showSubmitModal() {
+        // Show/hide submitter name field based on setting
+        const submitterField = document.getElementById('submitter-name-field');
+        const submitterInput = document.getElementById('submitter-name');
+        if (submitterField) {
+            submitterField.style.display = state.requireSubmitterName ? 'block' : 'none';
+        }
+        if (submitterInput) {
+            submitterInput.required = state.requireSubmitterName;
+            submitterInput.value = '';  // Clear previous value
+        }
         elements.submitModal.style.display = 'flex';
     }
 
@@ -375,6 +387,18 @@
         const callout = getActiveCallout();
         if (!callout) return;
 
+        // Validate submitter name if required
+        const submitterInput = document.getElementById('submitter-name');
+        let submittedBy = '';
+        if (state.requireSubmitterName) {
+            submittedBy = submitterInput ? submitterInput.value.trim() : '';
+            if (!submittedBy) {
+                alert('Please enter your name');
+                if (submitterInput) submitterInput.focus();
+                return;
+            }
+        }
+
         const calloutId = callout.id;
 
         // Close SSE for this callout
@@ -387,7 +411,9 @@
 
         try {
             const response = await fetch(`${BASE}/${SLUG}/api/callout/${calloutId}/submit`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ submitted_by: submittedBy })
             });
 
             if (!response.ok) {

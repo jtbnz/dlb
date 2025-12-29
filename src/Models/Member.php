@@ -13,7 +13,9 @@ class Member
         'SFF' => 5,
         'QFF' => 6,
         'FF' => 7,
-        'RCFF' => 8,
+        'RFF' => 8,   // Recruit Firefighter
+        'RCFF' => 8,  // Also Recruit Firefighter (alternate abbreviation)
+        'PFF' => 8,   // Probationary Firefighter
         'OS' => 9,
     ];
 
@@ -121,26 +123,32 @@ class Member
         }
 
         // Check if the rank contains a known rank abbreviation
-        foreach (self::RANK_ORDER as $abbrev => $order) {
-            if (stripos($rank, $abbrev) !== false) {
+        // Sort by length descending to match longer abbreviations first (e.g., RFF before FF)
+        $sortedRanks = self::RANK_ORDER;
+        uksort($sortedRanks, function ($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+
+        foreach ($sortedRanks as $abbrev => $order) {
+            // Use word boundary check to avoid partial matches
+            // e.g., "RFF" should not match when looking for "FF"
+            if (preg_match('/\b' . preg_quote($abbrev, '/') . '\b/i', $rank)) {
                 return $order;
             }
         }
 
-        // Check common full names
+        // Check common full names (sorted by specificity - longer first)
         $fullNames = [
-            'Chief Fire Officer' => 1,
             'Deputy Chief Fire Officer' => 2,
+            'Chief Fire Officer' => 1,
             'Senior Station Officer' => 3,
             'Station Officer' => 4,
             'Senior Firefighter' => 5,
             'Qualified Firefighter' => 6,
-            'Firefighter' => 7,
-            'Probationary Firefighter' => 7,
             'Recruit Firefighter' => 8,
-            'RCFF' => 8,
+            'Probationary Firefighter' => 8,
+            'Firefighter' => 7,
             'Operational Support' => 9,
-            'OS' => 9,
         ];
 
         foreach ($fullNames as $name => $order) {

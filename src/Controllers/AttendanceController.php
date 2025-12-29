@@ -47,6 +47,7 @@ class AttendanceController
                 'icad_number' => $lastCallout['icad_number'],
                 'created_at' => $lastCallout['created_at'],
             ] : null,
+            'require_submitter_name' => (bool)($brigade['require_submitter_name'] ?? 1),
         ]);
     }
 
@@ -177,7 +178,9 @@ class AttendanceController
             return;
         }
 
-        $submittedBy = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        // Get submitted_by from request body if provided
+        $data = json_decode(file_get_contents('php://input'), true);
+        $submittedBy = !empty($data['submitted_by']) ? trim($data['submitted_by']) : ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         Callout::submit((int)$calloutId, $submittedBy);
 
         audit_log($brigade['id'], (int)$calloutId, 'callout_submitted', []);

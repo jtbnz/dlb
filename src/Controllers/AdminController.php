@@ -832,6 +832,7 @@ class AdminController
             'include_non_attendees' => (bool)$brigade['include_non_attendees'],
             'member_order' => $brigade['member_order'] ?? 'rank_name',
             'region' => $brigade['region'] ?? 1,
+            'require_submitter_name' => (bool)($brigade['require_submitter_name'] ?? 1),
         ]);
     }
 
@@ -863,6 +864,10 @@ class AdminController
             if ($region >= 1 && $region <= 99) {
                 $updates['region'] = $region;
             }
+        }
+
+        if (isset($data['require_submitter_name'])) {
+            $updates['require_submitter_name'] = $data['require_submitter_name'] ? 1 : 0;
         }
 
         if (!empty($updates)) {

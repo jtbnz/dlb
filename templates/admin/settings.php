@@ -60,6 +60,17 @@ ob_start();
     </div>
 
     <div class="settings-section">
+        <h2>Submission Settings</h2>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="require-submitter-name" onchange="saveSubmitterSetting()">
+                Require submitter name on callout submission
+            </label>
+            <small class="form-help">When enabled, users must enter their name when submitting a callout.</small>
+        </div>
+    </div>
+
+    <div class="settings-section">
         <h2>Security</h2>
 
         <h3>Change Member PIN</h3>
@@ -123,6 +134,7 @@ async function loadSettings() {
     document.getElementById('include-non-attendees').checked = data.include_non_attendees;
     document.getElementById('member-order').value = data.member_order || 'rank_name';
     document.getElementById('region').value = data.region || 1;
+    document.getElementById('require-submitter-name').checked = data.require_submitter_name !== false;
 
     renderEmails();
     loadQRCode();
@@ -171,6 +183,16 @@ async function saveEmailSettings() {
         body: JSON.stringify({
             email_recipients: emailRecipients,
             include_non_attendees: document.getElementById('include-non-attendees').checked
+        })
+    });
+}
+
+async function saveSubmitterSetting() {
+    await fetch(`${BASE}/${SLUG}/admin/api/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            require_submitter_name: document.getElementById('require-submitter-name').checked
         })
     });
 }

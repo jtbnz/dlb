@@ -151,6 +151,11 @@ class Database
         if (!in_array('fenz_fetched_at', $calloutColumnNames)) {
             $this->pdo->exec("ALTER TABLE callouts ADD COLUMN fenz_fetched_at DATETIME");
         }
+
+        // Add require_submitter_name column to brigades if not exists (default: on)
+        if (!in_array('require_submitter_name', $brigadeColumnNames)) {
+            $this->pdo->exec("ALTER TABLE brigades ADD COLUMN require_submitter_name INTEGER DEFAULT 1");
+        }
     }
 
     public function initializeSchema(): void
@@ -167,6 +172,7 @@ class Database
             include_non_attendees INTEGER DEFAULT 0,
             member_order TEXT DEFAULT 'rank_name',
             region INTEGER DEFAULT 1,
+            require_submitter_name INTEGER DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );

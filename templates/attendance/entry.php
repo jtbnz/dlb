@@ -100,6 +100,10 @@ $content = <<<HTML
     <div class="modal-content">
         <h2>Submit Attendance?</h2>
         <p>This will lock the attendance and send an email notification.</p>
+        <div id="submitter-name-field" class="form-group" style="margin: 1rem 0;">
+            <label for="submitter-name">Your Name</label>
+            <input type="text" id="submitter-name" placeholder="Enter your name" required>
+        </div>
         <div class="modal-buttons">
             <button type="button" class="btn" onclick="closeSubmitModal()">Cancel</button>
             <button type="button" class="btn btn-success" onclick="confirmSubmit()">Submit</button>
