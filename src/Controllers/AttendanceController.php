@@ -467,12 +467,12 @@ class AttendanceController
 
     private function notifySSE(int $calloutId): void
     {
-        // Write to a file that SSE clients poll
-        $sseFile = __DIR__ . '/../../data/sse_' . $calloutId . '.json';
-        file_put_contents($sseFile, json_encode([
-            'timestamp' => microtime(true),
-            'callout_id' => $calloutId,
-        ]));
+        // Use database table instead of file for SSE notifications
+        // This is more reliable and scalable
+        db()->execute(
+            "INSERT OR REPLACE INTO sse_notifications (callout_id, timestamp) VALUES (?, ?)",
+            [$calloutId, time()]
+        );
     }
 
     public function history(string $slug): void

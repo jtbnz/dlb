@@ -262,6 +262,12 @@ class Database
             UNIQUE(identifier)
         );
 
+        CREATE TABLE IF NOT EXISTS sse_notifications (
+            callout_id INTEGER PRIMARY KEY,
+            timestamp INTEGER NOT NULL,
+            FOREIGN KEY (callout_id) REFERENCES callouts(id) ON DELETE CASCADE
+        );
+
         CREATE INDEX IF NOT EXISTS idx_trucks_brigade ON trucks(brigade_id);
         CREATE INDEX IF NOT EXISTS idx_positions_truck ON positions(truck_id);
         CREATE INDEX IF NOT EXISTS idx_members_brigade ON members(brigade_id);
