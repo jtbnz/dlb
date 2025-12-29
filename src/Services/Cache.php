@@ -26,11 +26,11 @@ class Cache
 
     /**
      * Store a value in cache
+     * Note: TTL is not implemented for request-scoped cache (cleared after request ends)
      */
-    public static function set(string $key, mixed $value, int $ttl = 0): void
+    public static function set(string $key, mixed $value): void
     {
         self::$cache[$key] = $value;
-        // TTL not implemented for in-memory cache (request-scoped)
     }
 
     /**

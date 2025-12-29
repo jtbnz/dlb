@@ -95,7 +95,7 @@ class SSEController
             echo ": keepalive\n\n";
             flush();
 
-            // Optimize polling: sleep 2 seconds instead of 1 to reduce server load
+            // Optimize polling: sleep 2 seconds instead of 1 to reduce server load by ~50%
             sleep(2);
         }
 

@@ -30,11 +30,6 @@ Options -Indexes
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-    
-    # Enable compression for text-based content
-    <FilesMatch "\.(html|css|js|json|xml|txt)$">
-        Header set Content-Encoding "gzip"
-    </FilesMatch>
 </IfModule>
 
 # Enable GZIP compression

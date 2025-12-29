@@ -177,26 +177,32 @@ class Member
         return $result;
     }
 
-    public static function update(int $id, array $data): int
+    public static function update(int $id, array $data, ?int $brigadeId = null): int
     {
-        $member = self::findById($id);
+        // If brigade_id not provided, fetch it
+        if ($brigadeId === null) {
+            $member = self::findById($id);
+            $brigadeId = $member['brigade_id'] ?? null;
+        }
+        
         $data['updated_at'] = date('Y-m-d H:i:s');
         $result = db()->update('members', $data, 'id = ?', [$id]);
+        
         // Invalidate cache for this brigade
-        if ($member) {
-            self::invalidateCache($member['brigade_id']);
+        if ($brigadeId !== null) {
+            self::invalidateCache($brigadeId);
         }
         return $result;
     }
 
-    public static function deactivate(int $id): int
+    public static function deactivate(int $id, ?int $brigadeId = null): int
     {
-        return self::update($id, ['is_active' => 0]);
+        return self::update($id, ['is_active' => 0], $brigadeId);
     }
 
-    public static function activate(int $id): int
+    public static function activate(int $id, ?int $brigadeId = null): int
     {
-        return self::update($id, ['is_active' => 1]);
+        return self::update($id, ['is_active' => 1], $brigadeId);
     }
 
     private static function invalidateCache(int $brigadeId): void

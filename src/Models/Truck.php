@@ -50,34 +50,49 @@ class Truck
         $result = db()->insert('trucks', $data);
         // Invalidate cache for this brigade
         if (isset($data['brigade_id'])) {
-            Cache::forget("trucks_brigade_{$data['brigade_id']}");
-            Cache::forget("trucks_with_positions_brigade_{$data['brigade_id']}");
+            self::invalidateCache($data['brigade_id']);
         }
         return $result;
     }
 
-    public static function update(int $id, array $data): int
+    public static function update(int $id, array $data, ?int $brigadeId = null): int
     {
-        $truck = self::findById($id);
+        // If brigade_id not provided, fetch it
+        if ($brigadeId === null) {
+            $truck = self::findById($id);
+            $brigadeId = $truck['brigade_id'] ?? null;
+        }
+        
         $result = db()->update('trucks', $data, 'id = ?', [$id]);
+        
         // Invalidate cache for this brigade
-        if ($truck) {
-            Cache::forget("trucks_brigade_{$truck['brigade_id']}");
-            Cache::forget("trucks_with_positions_brigade_{$truck['brigade_id']}");
+        if ($brigadeId !== null) {
+            self::invalidateCache($brigadeId);
         }
         return $result;
     }
 
-    public static function delete(int $id): int
+    public static function delete(int $id, ?int $brigadeId = null): int
     {
-        $truck = self::findById($id);
+        // If brigade_id not provided, fetch it
+        if ($brigadeId === null) {
+            $truck = self::findById($id);
+            $brigadeId = $truck['brigade_id'] ?? null;
+        }
+        
         $result = db()->delete('trucks', 'id = ?', [$id]);
+        
         // Invalidate cache for this brigade
-        if ($truck) {
-            Cache::forget("trucks_brigade_{$truck['brigade_id']}");
-            Cache::forget("trucks_with_positions_brigade_{$truck['brigade_id']}");
+        if ($brigadeId !== null) {
+            self::invalidateCache($brigadeId);
         }
         return $result;
+    }
+
+    private static function invalidateCache(int $brigadeId): void
+    {
+        Cache::forget("trucks_brigade_{$brigadeId}");
+        Cache::forget("trucks_with_positions_brigade_{$brigadeId}");
     }
 
     public static function reorder(int $brigadeId, array $order): void
