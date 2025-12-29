@@ -32,6 +32,17 @@
         updateHeaderForActiveCallout();
     }
 
+    // XSS Protection: Escape HTML to prevent injection attacks
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return '';
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     // DOM Elements
     const elements = {
         loading: document.getElementById('loading'),

@@ -31,6 +31,8 @@ class SuperAdminController
 
         if (SuperAdminAuth::verifyCredentials($username, $password)) {
             $this->clearRateLimit('super_admin');
+            // Regenerate session ID to prevent session fixation
+            session_regenerate_id(true);
             SuperAdminAuth::setAuthenticated();
             json_response(['success' => true, 'redirect' => base_path() . '/admin/dashboard']);
         } else {
