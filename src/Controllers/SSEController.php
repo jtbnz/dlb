@@ -94,7 +94,8 @@ class SSEController
             echo ": keepalive\n\n";
             flush();
 
-            sleep(1);
+            // Optimize polling: sleep 2 seconds instead of 1 to reduce server load
+            sleep(2);
         }
 
         // Tell client to reconnect (only for timeout, not submission)
