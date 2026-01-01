@@ -17,12 +17,24 @@ class Callout
         );
     }
 
-    public static function findAllActive(int $brigadeId): array
+    public static function findAllActive(int $brigadeId, bool $includeHidden = false): array
     {
+        if ($includeHidden) {
+            return db()->query(
+                "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'active' ORDER BY created_at ASC",
+                [$brigadeId]
+            );
+        }
+
         return db()->query(
-            "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'active' ORDER BY created_at ASC",
+            "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'active' AND (visible = 1 OR visible IS NULL) ORDER BY created_at ASC",
             [$brigadeId]
         );
+    }
+
+    public static function findAllActiveVisible(int $brigadeId): array
+    {
+        return self::findAllActive($brigadeId, false);
     }
 
     public static function findByIcadNumber(int $brigadeId, string $icadNumber): ?array
@@ -37,6 +49,14 @@ class Callout
     {
         return db()->queryOne(
             "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'submitted' ORDER BY submitted_at DESC LIMIT 1",
+            [$brigadeId]
+        );
+    }
+
+    public static function findLastSubmittedMuster(int $brigadeId): ?array
+    {
+        return db()->queryOne(
+            "SELECT * FROM callouts WHERE brigade_id = ? AND status = 'submitted' AND (LOWER(icad_number) LIKE 'muster%') ORDER BY submitted_at DESC LIMIT 1",
             [$brigadeId]
         );
     }

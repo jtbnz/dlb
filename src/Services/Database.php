@@ -156,6 +156,64 @@ class Database
         if (!in_array('require_submitter_name', $brigadeColumnNames)) {
             $this->pdo->exec("ALTER TABLE brigades ADD COLUMN require_submitter_name INTEGER DEFAULT 1");
         }
+
+        // Add visible column to callouts if not exists
+        if (!in_array('visible', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN visible INTEGER DEFAULT 1");
+        }
+
+        // Add call_date and call_time columns to callouts if not exists
+        if (!in_array('call_date', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN call_date DATE");
+        }
+        if (!in_array('call_time', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN call_time TIME");
+        }
+
+        // Add status and source columns to attendance if not exists
+        $attendanceColumns = $this->query("PRAGMA table_info(attendance)");
+        $attendanceColumnNames = array_column($attendanceColumns, 'name');
+
+        if (!in_array('status', $attendanceColumnNames)) {
+            $this->pdo->exec("ALTER TABLE attendance ADD COLUMN status CHAR(1) DEFAULT 'I'");
+        }
+        if (!in_array('source', $attendanceColumnNames)) {
+            $this->pdo->exec("ALTER TABLE attendance ADD COLUMN source VARCHAR(20) DEFAULT 'manual'");
+        }
+        if (!in_array('notes', $attendanceColumnNames)) {
+            $this->pdo->exec("ALTER TABLE attendance ADD COLUMN notes TEXT");
+        }
+
+        // Create api_tokens table if not exists
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS api_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                brigade_id INTEGER NOT NULL,
+                token_hash VARCHAR(255) NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                permissions TEXT NOT NULL,
+                last_used_at DATETIME,
+                expires_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (brigade_id) REFERENCES brigades(id) ON DELETE CASCADE
+            )
+        ");
+
+        // Create api_rate_limits table if not exists
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS api_rate_limits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_id INTEGER NOT NULL,
+                minute_count INTEGER DEFAULT 0,
+                minute_reset DATETIME,
+                hour_count INTEGER DEFAULT 0,
+                hour_reset DATETIME,
+                FOREIGN KEY (token_id) REFERENCES api_tokens(id) ON DELETE CASCADE
+            )
+        ");
+
+        // Create index for api_tokens
+        $this->pdo->exec("CREATE INDEX IF NOT EXISTS idx_api_tokens_brigade ON api_tokens(brigade_id)");
     }
 
     public function initializeSchema(): void

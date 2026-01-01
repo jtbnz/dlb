@@ -19,7 +19,8 @@
             <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/members" class="<?= strpos($_SERVER['REQUEST_URI'], '/members') !== false ? 'active' : '' ?>">Members</a>
             <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/trucks" class="<?= strpos($_SERVER['REQUEST_URI'], '/trucks') !== false ? 'active' : '' ?>">Trucks</a>
             <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/callouts" class="<?= strpos($_SERVER['REQUEST_URI'], '/callouts') !== false ? 'active' : '' ?>">Callouts</a>
-            <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/settings" class="<?= strpos($_SERVER['REQUEST_URI'], '/settings') !== false ? 'active' : '' ?>">Settings</a>
+            <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/settings" class="<?= strpos($_SERVER['REQUEST_URI'], '/settings') !== false && strpos($_SERVER['REQUEST_URI'], '/api-tokens') === false ? 'active' : '' ?>">Settings</a>
+            <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/api-tokens" class="<?= strpos($_SERVER['REQUEST_URI'], '/api-tokens') !== false ? 'active' : '' ?>">API Tokens</a>
             <a href="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/audit" class="<?= strpos($_SERVER['REQUEST_URI'], '/audit') !== false ? 'active' : '' ?>">Audit Log</a>
         </div>
         <form action="<?= $basePath ?>/<?= sanitize($slug) ?>/admin/logout" method="POST" class="admin-logout">

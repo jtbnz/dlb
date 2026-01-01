@@ -8,6 +8,8 @@
         trucks: [],
         members: [],
         availableMembersPerCallout: {},  // Map: calloutId -> members[]
+        leaveMembersPerCallout: {},      // Map: calloutId -> leave members[]
+        absentMembersPerCallout: {},     // Map: calloutId -> absent members[]
         selectedMember: null,
         eventSources: {},                // Map: calloutId -> EventSource
         isProcessing: false,
@@ -23,6 +25,14 @@
 
     function getActiveAvailableMembers() {
         return state.availableMembersPerCallout[state.activeCalloutId] || [];
+    }
+
+    function getActiveLeaveMembers() {
+        return state.leaveMembersPerCallout[state.activeCalloutId] || [];
+    }
+
+    function getActiveAbsentMembers() {
+        return state.absentMembersPerCallout[state.activeCalloutId] || [];
     }
 
     function switchToCallout(calloutId) {
@@ -78,10 +88,14 @@
             const callouts = data.callouts || [];
             state.callouts = callouts;
 
-            // Build available members map for each callout
+            // Build available/leave/absent members map for each callout
             state.availableMembersPerCallout = {};
+            state.leaveMembersPerCallout = {};
+            state.absentMembersPerCallout = {};
             callouts.forEach(callout => {
                 state.availableMembersPerCallout[callout.id] = callout.available_members || [];
+                state.leaveMembersPerCallout[callout.id] = callout.leave_members || [];
+                state.absentMembersPerCallout[callout.id] = callout.absent_members || [];
             });
 
             if (callouts.length > 0) {
@@ -211,7 +225,7 @@
         const callout = getActiveCallout();
         if (!callout || callout.status !== 'active') return;
 
-        if (!confirm('Copy attendance from the last submitted callout? This will add all members from that call to this one.')) {
+        if (!confirm('Copy attendance from the last submitted muster? This will add all members from that muster to this one.')) {
             return;
         }
 
@@ -245,7 +259,7 @@
             alert('Failed to copy attendance. Please try again.');
         } finally {
             elements.copyLastBtn.disabled = false;
-            elements.copyLastBtn.textContent = 'Copy Last Call';
+            elements.copyLastBtn.textContent = 'Copy Last Muster';
         }
     }
 
@@ -787,6 +801,7 @@
         renderTabs();
         renderTrucks();
         renderAvailableMembers();
+        renderLeaveMembers();
     }
 
     // Render the tab bar for multiple callouts
@@ -944,6 +959,33 @@
                 <span class="name">${escapeHtml(member.display_name || member.name)}</span>
             </div>
         `).join('') || '<p class="no-data">All members assigned</p>';
+    }
+
+    function renderLeaveMembers() {
+        const leaveMembers = getActiveLeaveMembers();
+        const leaveSection = document.getElementById('leave-section');
+        const leaveContainer = document.getElementById('leave-members');
+        const leaveCount = document.getElementById('leave-count');
+
+        if (!leaveSection || !leaveContainer) return;
+
+        if (leaveMembers.length === 0) {
+            leaveSection.style.display = 'none';
+            return;
+        }
+
+        leaveSection.style.display = 'block';
+
+        if (leaveCount) {
+            leaveCount.textContent = leaveMembers.length;
+        }
+
+        leaveContainer.innerHTML = leaveMembers.map(member => `
+            <div class="leave-chip">
+                <span class="name">${escapeHtml(member.member_name || member.display_name)}</span>
+                ${member.notes ? `<span class="notes">${escapeHtml(member.notes)}</span>` : ''}
+            </div>
+        `).join('');
     }
 
     window.selectMember = function(memberId) {

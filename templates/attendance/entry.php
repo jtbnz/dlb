@@ -10,7 +10,7 @@ $content = <<<HTML
                 <span id="icad-label">ICAD:</span>
                 <span id="icad-number">-</span>
                 <button id="change-icad-btn" class="btn-small" style="display:none;">Change</button>
-                <button id="copy-last-btn" class="btn-small" style="display:none;">Copy Last Call</button>
+                <button id="copy-last-btn" class="btn-small" style="display:none;">Copy Last Muster</button>
             </div>
         </div>
         <div class="header-right">
@@ -68,6 +68,15 @@ $content = <<<HTML
                 </div>
                 <div id="available-members" class="available-members">
                     <!-- Available members will be rendered here -->
+                </div>
+                <div id="leave-section" class="leave-section" style="display:none;">
+                    <div class="panel-header leave-header">
+                        <h3>On Leave</h3>
+                        <span id="leave-count" class="count-badge leave-badge">0</span>
+                    </div>
+                    <div id="leave-members" class="leave-members">
+                        <!-- Leave members will be rendered here -->
+                    </div>
                 </div>
             </div>
             <div class="panel trucks-panel">

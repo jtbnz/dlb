@@ -8,6 +8,7 @@ use App\Models\Truck;
 use App\Models\Position;
 use App\Models\Callout;
 use App\Models\Attendance;
+use App\Models\ApiToken;
 use App\Middleware\AdminAuth;
 
 class AdminController
@@ -1051,5 +1052,129 @@ class AdminController
         );
 
         json_response(['logs' => $logs]);
+    }
+
+    // API Tokens
+    public function apiTokens(string $slug): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+        echo view('admin/api-tokens', [
+            'brigade' => $brigade,
+            'slug' => $slug,
+            'permissions' => ApiToken::PERMISSIONS,
+        ]);
+    }
+
+    public function apiGetTokens(string $slug): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $tokens = ApiToken::findByBrigade($brigade['id']);
+
+        // Parse permissions JSON for each token
+        foreach ($tokens as &$token) {
+            $token['permissions_array'] = json_decode($token['permissions'], true) ?? [];
+        }
+
+        json_response([
+            'tokens' => $tokens,
+            'permissions' => ApiToken::PERMISSIONS,
+        ]);
+    }
+
+    public function apiCreateToken(string $slug): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $name = trim($data['name'] ?? '');
+        if (empty($name)) {
+            json_response(['error' => 'Token name is required'], 400);
+            return;
+        }
+
+        $permissions = $data['permissions'] ?? [];
+        if (empty($permissions)) {
+            json_response(['error' => 'At least one permission is required'], 400);
+            return;
+        }
+
+        $expiresAt = null;
+        if (!empty($data['expires_at'])) {
+            $expiresAt = $data['expires_at'];
+        }
+
+        try {
+            $result = ApiToken::generate($brigade['id'], $name, $permissions, $expiresAt);
+
+            audit_log($brigade['id'], null, 'api_token_created', [
+                'token_id' => $result['id'],
+                'name' => $name,
+                'permissions' => $permissions,
+            ]);
+
+            json_response([
+                'success' => true,
+                'token' => $result['token'],
+                'id' => $result['id'],
+                'name' => $result['name'],
+                'permissions' => $result['permissions'],
+                'expires_at' => $result['expires_at'],
+            ]);
+        } catch (\Exception $e) {
+            json_response(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function apiUpdateToken(string $slug, string $tokenId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $token = ApiToken::findById((int)$tokenId);
+        if (!$token || $token['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Token not found'], 404);
+            return;
+        }
+
+        $updates = [];
+        if (isset($data['name'])) {
+            $updates['name'] = trim($data['name']);
+        }
+        if (isset($data['permissions'])) {
+            $updates['permissions'] = $data['permissions'];
+        }
+        if (array_key_exists('expires_at', $data)) {
+            $updates['expires_at'] = $data['expires_at'] ?: null;
+        }
+
+        ApiToken::update((int)$tokenId, $updates);
+
+        audit_log($brigade['id'], null, 'api_token_updated', [
+            'token_id' => $tokenId,
+            'updates' => array_keys($updates),
+        ]);
+
+        json_response(['success' => true]);
+    }
+
+    public function apiRevokeToken(string $slug, string $tokenId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $token = ApiToken::findById((int)$tokenId);
+        if (!$token || $token['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Token not found'], 404);
+            return;
+        }
+
+        ApiToken::revoke((int)$tokenId);
+
+        audit_log($brigade['id'], null, 'api_token_revoked', [
+            'token_id' => $tokenId,
+            'name' => $token['name'],
+        ]);
+
+        json_response(['success' => true]);
     }
 }

@@ -33,6 +33,8 @@ class AttendanceController
         // Enrich each callout with attendance data
         foreach ($callouts as &$callout) {
             $callout['attendance'] = Attendance::findByCalloutGrouped($callout['id']);
+            $callout['leave_members'] = Attendance::findLeaveByCallout($callout['id']);
+            $callout['absent_members'] = Attendance::findAbsentByCallout($callout['id']);
             $callout['available_members'] = Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder);
         }
 
@@ -129,11 +131,67 @@ class AttendanceController
             'call_type' => $callType,
         ]);
 
+        // For musters, auto-populate all active members to Station/Standby
+        if ($isMuster) {
+            $this->autoPopulateMusterAttendance($brigade['id'], $calloutId);
+        }
+
         $callout = Callout::findById($calloutId);
-        $callout['attendance'] = [];
-        $callout['available_members'] = Member::findByBrigadeOrdered($brigade['id'], $memberOrder);
+        $callout['attendance'] = Attendance::findByCalloutGrouped($calloutId);
+        $callout['leave_members'] = Attendance::findLeaveByCallout($calloutId);
+        $callout['absent_members'] = Attendance::findAbsentByCallout($calloutId);
+        $callout['available_members'] = Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder);
 
         json_response(['callout' => $callout]);
+    }
+
+    /**
+     * Auto-populate all active members to Station/Standby for a muster
+     */
+    private function autoPopulateMusterAttendance(int $brigadeId, int $calloutId): void
+    {
+        // Find the Station truck (is_station = 1)
+        $trucks = Truck::findByBrigadeWithPositions($brigadeId);
+        $stationTruck = null;
+        $standbyPosition = null;
+
+        foreach ($trucks as $truck) {
+            if ($truck['is_station'] == 1) {
+                $stationTruck = $truck;
+                // Find the standby position (allow_multiple = 1)
+                foreach ($truck['positions'] as $position) {
+                    if ($position['allow_multiple'] == 1) {
+                        $standbyPosition = $position;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (!$stationTruck || !$standbyPosition) {
+            // No station truck configured, skip auto-population
+            return;
+        }
+
+        // Get all active members
+        $members = Member::findByBrigade($brigadeId, true);
+
+        // Add each member to the standby position
+        foreach ($members as $member) {
+            try {
+                Attendance::create([
+                    'callout_id' => $calloutId,
+                    'member_id' => $member['id'],
+                    'truck_id' => $stationTruck['id'],
+                    'position_id' => $standbyPosition['id'],
+                    'status' => 'I',
+                    'source' => 'auto',
+                ]);
+            } catch (\Exception $e) {
+                // Skip if there's a conflict
+            }
+        }
     }
 
     public function updateCallout(string $slug, string $calloutId): void
@@ -252,10 +310,10 @@ class AttendanceController
             return;
         }
 
-        // Get the last submitted callout
-        $lastCallout = Callout::findLastSubmitted($brigade['id']);
+        // Get the last submitted muster (not callout)
+        $lastCallout = Callout::findLastSubmittedMuster($brigade['id']);
         if (!$lastCallout) {
-            json_response(['error' => 'No previous callout to copy from'], 400);
+            json_response(['error' => 'No previous muster to copy from'], 400);
             return;
         }
 

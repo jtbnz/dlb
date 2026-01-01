@@ -16,10 +16,49 @@ class Attendance
                     t.name as truck_name, t.is_station, p.name as position_name, p.allow_multiple
              FROM attendance a
              JOIN members m ON a.member_id = m.id
-             JOIN trucks t ON a.truck_id = t.id
-             JOIN positions p ON a.position_id = p.id
-             WHERE a.callout_id = ?
+             LEFT JOIN trucks t ON a.truck_id = t.id
+             LEFT JOIN positions p ON a.position_id = p.id
+             WHERE a.callout_id = ? AND (a.status = 'I' OR a.status IS NULL)
              ORDER BY t.sort_order, p.sort_order, m.display_name",
+            [$calloutId]
+        );
+    }
+
+    public static function findByCalloutWithStatus(int $calloutId): array
+    {
+        return db()->query(
+            "SELECT a.*, m.display_name as member_name, m.rank as member_rank,
+                    t.name as truck_name, t.is_station, p.name as position_name, p.allow_multiple
+             FROM attendance a
+             JOIN members m ON a.member_id = m.id
+             LEFT JOIN trucks t ON a.truck_id = t.id
+             LEFT JOIN positions p ON a.position_id = p.id
+             WHERE a.callout_id = ?
+             ORDER BY a.status, t.sort_order, p.sort_order, m.display_name",
+            [$calloutId]
+        );
+    }
+
+    public static function findLeaveByCallout(int $calloutId): array
+    {
+        return db()->query(
+            "SELECT a.*, m.display_name as member_name, m.rank as member_rank
+             FROM attendance a
+             JOIN members m ON a.member_id = m.id
+             WHERE a.callout_id = ? AND a.status = 'L'
+             ORDER BY m.display_name",
+            [$calloutId]
+        );
+    }
+
+    public static function findAbsentByCallout(int $calloutId): array
+    {
+        return db()->query(
+            "SELECT a.*, m.display_name as member_name, m.rank as member_rank
+             FROM attendance a
+             JOIN members m ON a.member_id = m.id
+             WHERE a.callout_id = ? AND a.status = 'A'
+             ORDER BY m.display_name",
             [$calloutId]
         );
     }
@@ -66,7 +105,44 @@ class Attendance
         // Remove existing attendance for this member in this callout
         db()->delete('attendance', 'callout_id = ? AND member_id = ?', [$data['callout_id'], $data['member_id']]);
 
+        // Set default status if not provided
+        if (!isset($data['status'])) {
+            $data['status'] = 'I';
+        }
+        if (!isset($data['source'])) {
+            $data['source'] = 'manual';
+        }
+
         return db()->insert('attendance', $data);
+    }
+
+    /**
+     * Create attendance with status (for Leave/Absent without truck/position)
+     */
+    public static function createWithStatus(array $data): int
+    {
+        // Remove existing attendance for this member in this callout
+        db()->delete('attendance', 'callout_id = ? AND member_id = ?', [$data['callout_id'], $data['member_id']]);
+
+        // For Leave/Absent status, truck_id and position_id are optional
+        $insertData = [
+            'callout_id' => $data['callout_id'],
+            'member_id' => $data['member_id'],
+            'status' => $data['status'] ?? 'I',
+            'source' => $data['source'] ?? 'manual',
+            'notes' => $data['notes'] ?? null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+
+        // Only include truck/position if provided
+        if (!empty($data['truck_id'])) {
+            $insertData['truck_id'] = $data['truck_id'];
+        }
+        if (!empty($data['position_id'])) {
+            $insertData['position_id'] = $data['position_id'];
+        }
+
+        return db()->insert('attendance', $insertData);
     }
 
     public static function delete(int $id): int

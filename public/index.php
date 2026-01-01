@@ -70,6 +70,16 @@ $routes = [
     ['GET', '/([a-z0-9-]+)', 'AuthController@showPin'],
     ['POST', '/([a-z0-9-]+)/auth', 'AuthController@verifyPin'],
 
+    // API v1 routes (token auth for external integrations)
+    ['POST', '/([a-z0-9-]+)/api/v1/musters', 'ApiController@createMuster'],
+    ['GET', '/([a-z0-9-]+)/api/v1/musters', 'ApiController@listMusters'],
+    ['PUT', '/([a-z0-9-]+)/api/v1/musters/([0-9]+)/visibility', 'ApiController@updateVisibility'],
+    ['POST', '/([a-z0-9-]+)/api/v1/musters/([0-9]+)/attendance', 'ApiController@setAttendance'],
+    ['POST', '/([a-z0-9-]+)/api/v1/musters/([0-9]+)/attendance/bulk', 'ApiController@bulkSetAttendance'],
+    ['GET', '/([a-z0-9-]+)/api/v1/musters/([0-9]+)/attendance', 'ApiController@getAttendance'],
+    ['GET', '/([a-z0-9-]+)/api/v1/members', 'ApiController@listMembers'],
+    ['POST', '/([a-z0-9-]+)/api/v1/members', 'ApiController@createMember'],
+
     // Attendance API routes
     ['GET', '/([a-z0-9-]+)/api/callout/active', 'AttendanceController@getActive'],
     ['GET', '/([a-z0-9-]+)/api/callout/last-attendance', 'AttendanceController@getLastCallAttendance'],
@@ -136,6 +146,13 @@ $routes = [
     // Admin Audit
     ['GET', '/([a-z0-9-]+)/admin/audit', 'AdminController@audit'],
     ['GET', '/([a-z0-9-]+)/admin/api/audit', 'AdminController@apiGetAudit'],
+
+    // Admin API Tokens
+    ['GET', '/([a-z0-9-]+)/admin/api-tokens', 'AdminController@apiTokens'],
+    ['GET', '/([a-z0-9-]+)/admin/api/tokens', 'AdminController@apiGetTokens'],
+    ['POST', '/([a-z0-9-]+)/admin/api/tokens', 'AdminController@apiCreateToken'],
+    ['PUT', '/([a-z0-9-]+)/admin/api/tokens/([0-9]+)', 'AdminController@apiUpdateToken'],
+    ['DELETE', '/([a-z0-9-]+)/admin/api/tokens/([0-9]+)', 'AdminController@apiRevokeToken'],
 ];
 
 $matched = false;
