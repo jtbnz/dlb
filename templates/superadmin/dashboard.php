@@ -64,6 +64,37 @@ $content = <<<HTML
     </div>
 </div>
 
+<!-- Welcome Email Modal -->
+<div id="welcome-modal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>Brigade Created Successfully</h3>
+            <button class="modal-close" onclick="closeWelcomeModal()">&times;</button>
+        </div>
+        <div class="welcome-content">
+            <p class="success-message">The brigade has been created. Copy the following email to send to the brigade admin:</p>
+            <div class="email-preview">
+                <div class="email-field">
+                    <label>Subject:</label>
+                    <div class="field-row">
+                        <input type="text" id="welcome-subject" readonly>
+                        <button class="btn btn-small" onclick="copyField('welcome-subject')">Copy</button>
+                    </div>
+                </div>
+                <div class="email-field">
+                    <label>Body:</label>
+                    <textarea id="welcome-body" readonly rows="18"></textarea>
+                    <button class="btn btn-small copy-body-btn" onclick="copyField('welcome-body')">Copy Body</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="copyAllEmail()">Copy All to Clipboard</button>
+                <button class="btn btn-primary" onclick="closeWelcomeModal()">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Brigade Modal -->
 <div id="edit-modal" class="modal">
     <div class="modal-content">
@@ -120,12 +151,26 @@ $content = <<<HTML
 
 .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
 .modal-content { background: white; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-content.modal-large { max-width: 700px; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e5e7eb; }
 .modal-header h3 { margin: 0; }
 .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
 .modal-content form { padding: 20px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 .modal-actions .btn-danger { margin-right: auto; }
+
+.welcome-content { padding: 20px; }
+.welcome-content .success-message { color: #16a34a; font-weight: 500; margin-bottom: 20px; }
+.email-preview { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 15px; }
+.email-field { margin-bottom: 15px; }
+.email-field:last-child { margin-bottom: 0; }
+.email-field label { display: block; font-weight: 500; margin-bottom: 5px; color: #374151; }
+.email-field .field-row { display: flex; gap: 10px; }
+.email-field .field-row input { flex: 1; }
+.email-field input, .email-field textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-family: monospace; font-size: 13px; background: white; }
+.email-field textarea { resize: vertical; min-height: 300px; }
+.email-field .copy-body-btn { margin-top: 10px; }
+.btn-small { padding: 6px 12px; font-size: 12px; }
 
 .btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
 .btn-primary { background: #3b82f6; color: white; }
@@ -211,6 +256,50 @@ function closeEditModal() {
     document.getElementById('edit-modal').style.display = 'none';
 }
 
+function showWelcomeModal(welcomeEmail) {
+    document.getElementById('welcome-subject').value = welcomeEmail.subject;
+    document.getElementById('welcome-body').value = welcomeEmail.body;
+    document.getElementById('welcome-modal').style.display = 'flex';
+}
+
+function closeWelcomeModal() {
+    document.getElementById('welcome-modal').style.display = 'none';
+}
+
+function copyField(fieldId) {
+    const field = document.getElementById(fieldId);
+    field.select();
+    document.execCommand('copy');
+
+    // Show feedback
+    const btn = field.parentElement.querySelector('button') || field.nextElementSibling;
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = originalText; }, 1500);
+}
+
+function copyAllEmail() {
+    const subject = document.getElementById('welcome-subject').value;
+    const body = document.getElementById('welcome-body').value;
+    const fullEmail = 'Subject: ' + subject + '\\n\\n' + body;
+
+    navigator.clipboard.writeText(fullEmail).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = originalText; }, 1500);
+    }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = fullEmail;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('Email copied to clipboard!');
+    });
+}
+
 document.getElementById('create-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -235,6 +324,11 @@ document.getElementById('create-form').addEventListener('submit', async function
         if (data.success) {
             closeCreateModal();
             loadBrigades();
+
+            // Show welcome email modal if available
+            if (data.welcome_email) {
+                showWelcomeModal(data.welcome_email);
+            }
         } else {
             errorDiv.textContent = data.error || 'Failed to create brigade';
         }

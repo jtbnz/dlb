@@ -115,6 +115,10 @@ class SuperAdminController
             'member_order' => 'rank_name',
         ]);
 
+        // Generate welcome email template
+        $appUrl = config('app.url', 'https://example.com');
+        $welcomeEmail = $this->generateWelcomeEmail($name, $slug, $adminUsername, $adminPassword, $pin, $appUrl);
+
         json_response([
             'success' => true,
             'brigade' => [
@@ -122,7 +126,86 @@ class SuperAdminController
                 'name' => $name,
                 'slug' => $slug,
             ],
+            'welcome_email' => $welcomeEmail,
         ]);
+    }
+
+    /**
+     * Generate a welcome email template for a new brigade admin
+     */
+    private function generateWelcomeEmail(string $name, string $slug, string $adminUsername, string $adminPassword, string $pin, string $appUrl): array
+    {
+        $attendanceUrl = rtrim($appUrl, '/') . '/' . $slug;
+        $adminUrl = rtrim($appUrl, '/') . '/' . $slug . '/admin';
+
+        $subject = "Welcome to Brigade Attendance - {$name}";
+
+        $body = <<<EMAIL
+Kia ora,
+
+Your brigade has been set up on the Digital Logbook (DLB) Brigade Attendance system. Below are your login details and instructions to get started.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BRIGADE DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Brigade Name: {$name}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADMIN ACCESS (for brigade management)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+URL: {$adminUrl}
+Username: {$adminUsername}
+Password: {$adminPassword}
+
+Use this to:
+- Add and manage brigade members
+- Configure trucks and positions
+- View and export callout history
+- Generate API tokens for integrations
+- Update settings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ATTENDANCE ENTRY (for all members)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+URL: {$attendanceUrl}
+PIN: {$pin}
+
+Share this URL and PIN with your brigade members.
+They can use this on any device to record attendance at callouts and musters.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GETTING STARTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Log in to Admin using the credentials above
+2. Add your brigade members (Members > Add Member or Import CSV)
+3. Configure your trucks and positions (Trucks > Add Truck)
+4. Share the Attendance URL and PIN with your members
+5. Optionally set up a QR code (Settings > QR Code)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECURITY RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Change your admin password after first login
+- Keep the attendance PIN simple for easy member access
+- Only share admin credentials with authorised personnel
+
+If you have any questions, please contact your system administrator.
+
+Nga mihi,
+Brigade Attendance System
+EMAIL;
+
+        return [
+            'subject' => $subject,
+            'body' => $body,
+            'admin_url' => $adminUrl,
+            'attendance_url' => $attendanceUrl,
+        ];
     }
 
     public function apiUpdateBrigade(string $brigadeId): void
