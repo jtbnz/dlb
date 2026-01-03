@@ -5,6 +5,7 @@ import {
   isProduction,
   getBrigadeSlug,
   waitForPageLoad,
+  createApiToken,
 } from '../fixtures/test-helpers';
 
 /**
@@ -145,33 +146,16 @@ test.describe('API v1 Authentication', () => {
 
 test.describe('API v1 Muster Operations', () => {
   const slug = getBrigadeSlug();
-  let apiToken: string;
+  let apiToken: string | null = null;
 
-  test.beforeAll(async ({ browser }) => {
-    // Create a token for API tests
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
+  test.beforeEach(async ({ page }) => {
+    // Authenticate and create token for each test
     await authenticateAsAdmin(page, slug);
-    const response = await page.request.post(`${slug}/admin/api/tokens`, {
-      data: JSON.stringify({
-        name: `E2E Test Token ${Date.now()}`,
-        permissions: testApiToken.permissions,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const data = await response.json();
-    apiToken = data.token || data.plain_token;
-
-    await context.close();
+    apiToken = await createApiToken(page, slug, testApiToken.permissions);
   });
 
   test('should create muster via API v1', async ({ page }) => {
-    if (!apiToken) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken, 'Failed to create API token');
 
     // Use unique ICAD number to avoid conflicts with previous test runs
     const uniqueIcad = `F${Date.now()}`;
@@ -196,10 +180,7 @@ test.describe('API v1 Muster Operations', () => {
   });
 
   test('should list musters via API v1', async ({ page }) => {
-    if (!apiToken) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken, 'Failed to create API token');
 
     const response = await page.request.get(`${slug}/api/v1/musters`, {
       headers: {
@@ -213,10 +194,7 @@ test.describe('API v1 Muster Operations', () => {
   });
 
   test('should update muster visibility via API v1', async ({ page }) => {
-    if (!apiToken) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken, 'Failed to create API token');
 
     // Create a muster first with unique ICAD
     const createResponse = await page.request.post(`${slug}/api/v1/musters`, {
@@ -253,21 +231,10 @@ test.describe('API v1 Attendance Operations', () => {
   let musterId: number;
   let memberId: number;
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // Get or create token
+  test.beforeEach(async ({ page }) => {
+    // Authenticate and create token
     await authenticateAsAdmin(page, slug);
-    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
-      data: JSON.stringify({
-        name: `Attendance Test Token ${Date.now()}`,
-        permissions: testApiToken.permissions,
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const tokenData = await tokenResponse.json();
-    apiToken = tokenData.token || tokenData.plain_token;
+    apiToken = await createApiToken(page, slug, testApiToken.permissions);
 
     // Get a member ID
     const membersResponse = await page.request.get(`${slug}/admin/api/members`);
@@ -292,15 +259,10 @@ test.describe('API v1 Attendance Operations', () => {
       const musterData = await musterResponse.json();
       musterId = musterData.muster?.id || musterData.id;
     }
-
-    await context.close();
   });
 
   test('should set member attendance status via API v1', async ({ page }) => {
-    if (!apiToken || !musterId || !memberId) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken || !musterId || !memberId, 'Missing token, muster, or member');
 
     const response = await page.request.post(`${slug}/api/v1/musters/${musterId}/attendance`, {
       data: JSON.stringify({
@@ -318,10 +280,7 @@ test.describe('API v1 Attendance Operations', () => {
   });
 
   test('should bulk set attendance via API v1', async ({ page }) => {
-    if (!apiToken || !musterId || !memberId) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken || !musterId || !memberId, 'Missing token, muster, or member');
 
     const response = await page.request.post(`${slug}/api/v1/musters/${musterId}/attendance/bulk`, {
       data: JSON.stringify({
@@ -360,32 +319,16 @@ test.describe('API v1 Attendance Operations', () => {
 
 test.describe('API v1 Member Operations', () => {
   const slug = getBrigadeSlug();
-  let apiToken: string;
+  let apiToken: string | null = null;
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
+  test.beforeEach(async ({ page }) => {
+    // Authenticate and create token for each test
     await authenticateAsAdmin(page, slug);
-    const response = await page.request.post(`${slug}/admin/api/tokens`, {
-      data: JSON.stringify({
-        name: `Member API Test Token ${Date.now()}`,
-        permissions: ['members:read', 'members:create'],
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const data = await response.json();
-    apiToken = data.token || data.plain_token;
-
-    await context.close();
+    apiToken = await createApiToken(page, slug, ['members:read', 'members:create']);
   });
 
   test('should list members via API v1', async ({ page }) => {
-    if (!apiToken) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken, 'Failed to create API token');
 
     const response = await page.request.get(`${slug}/api/v1/members`, {
       headers: {
@@ -399,10 +342,7 @@ test.describe('API v1 Member Operations', () => {
   });
 
   test('should create member via API v1', async ({ page }) => {
-    if (!apiToken) {
-      test.skip();
-      return;
-    }
+    test.skip(!apiToken, 'Failed to create API token');
 
     const response = await page.request.post(`${slug}/api/v1/members`, {
       data: JSON.stringify({
@@ -435,40 +375,23 @@ test.describe('API v1 Error Handling', () => {
     expect(data.error).toBeDefined();
   });
 
-  test('should return 404 for non-existent muster', async ({ browser }) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // Get a valid token
+  test('should return 404 for non-existent muster', async ({ page }) => {
+    // Authenticate and get a valid token
     await authenticateAsAdmin(page, slug);
-    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
-      data: JSON.stringify({
-        name: `404 Test Token ${Date.now()}`,
-        permissions: ['attendance:read'],
-      }),
-      headers: { 'Content-Type': 'application/json' },
+    const apiToken = await createApiToken(page, slug, ['attendance:read']);
+    test.skip(!apiToken, 'Failed to create API token');
+
+    const response = await page.request.get(`${slug}/api/v1/musters/99999/attendance`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+      },
     });
-    const tokenData = await tokenResponse.json();
-    const apiToken = tokenData.token || tokenData.plain_token;
 
-    if (apiToken) {
-      const response = await page.request.get(`${slug}/api/v1/musters/99999/attendance`, {
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      });
-
-      expect(response.status()).toBe(404);
-    }
-
-    await context.close();
+    expect(response.status()).toBe(404);
   });
 
-  test('should reject modification of submitted muster', async ({ browser }) => {
+  test('should reject modification of submitted muster', async ({ page }) => {
     // This tests the MUSTER_SUBMITTED error code
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
     await authenticateAsAdmin(page, slug);
 
     // Get submitted callouts
@@ -476,72 +399,47 @@ test.describe('API v1 Error Handling', () => {
     const calloutsData = await calloutsResponse.json();
     const submittedCallout = calloutsData.callouts?.find((c: any) => c.status === 'submitted');
 
-    if (submittedCallout) {
-      // Get token
-      const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
-        data: JSON.stringify({
-          name: `Submitted Test Token ${Date.now()}`,
-          permissions: ['attendance:create'],
-        }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const tokenData = await tokenResponse.json();
-      const apiToken = tokenData.token || tokenData.plain_token;
+    test.skip(!submittedCallout, 'No submitted callout found to test');
 
-      if (apiToken) {
-        // Try to add attendance to submitted callout
-        const response = await page.request.post(`${slug}/api/v1/musters/${submittedCallout.id}/attendance`, {
-          data: JSON.stringify({ member_id: 1, status: 'L' }),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiToken}`,
-          },
-        });
+    // Get token
+    const apiToken = await createApiToken(page, slug, ['attendance:create']);
+    test.skip(!apiToken, 'Failed to create API token');
 
-        expect([400, 403, 409]).toContain(response.status());
-      }
-    }
+    // Try to add attendance to submitted callout
+    const response = await page.request.post(`${slug}/api/v1/musters/${submittedCallout.id}/attendance`, {
+      data: JSON.stringify({ member_id: 1, status: 'L' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`,
+      },
+    });
 
-    await context.close();
+    expect([400, 403, 409]).toContain(response.status());
   });
 });
 
 test.describe('API v1 Permission Enforcement', () => {
   const slug = getBrigadeSlug();
 
-  test('should reject operations without required permission', async ({ browser }) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
+  test('should reject operations without required permission', async ({ page }) => {
     await authenticateAsAdmin(page, slug);
 
-    // Create token with limited permissions
-    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
+    // Create token with limited permissions (read only)
+    const apiToken = await createApiToken(page, slug, ['musters:read']);
+    test.skip(!apiToken, 'Failed to create API token');
+
+    // Try to create a muster (requires musters:create) - should be rejected due to missing permission
+    const response = await page.request.post(`${slug}/api/v1/musters`, {
       data: JSON.stringify({
-        name: `Limited Permission Token ${Date.now()}`,
-        permissions: ['musters:read'], // Read only
+        icad_number: `F${Date.now()}`,
+        call_date: new Date().toISOString().split('T')[0],
       }),
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`,
+      },
     });
-    const tokenData = await tokenResponse.json();
-    const apiToken = tokenData.token || tokenData.plain_token;
 
-    if (apiToken) {
-      // Try to create a muster (requires musters:create) - should be rejected due to missing permission
-      const response = await page.request.post(`${slug}/api/v1/musters`, {
-        data: JSON.stringify({
-          icad_number: `F${Date.now()}`,
-          call_date: new Date().toISOString().split('T')[0],
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      });
-
-      expect([401, 403]).toContain(response.status());
-    }
-
-    await context.close();
+    expect([401, 403]).toContain(response.status());
   });
 });

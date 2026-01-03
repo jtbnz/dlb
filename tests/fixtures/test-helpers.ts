@@ -282,3 +282,48 @@ export async function takeScreenshot(
     fullPage: true,
   });
 }
+
+/**
+ * Create an API token for testing (requires admin authentication first)
+ */
+export async function createApiToken(
+  page: Page,
+  slug: string,
+  permissions: string[]
+): Promise<string | null> {
+  try {
+    const response = await page.request.post(`${slug}/admin/api/tokens`, {
+      data: JSON.stringify({
+        name: `E2E Test Token ${Date.now()}`,
+        permissions,
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok()) {
+      console.error('Failed to create API token:', response.status());
+      return null;
+    }
+
+    const data = await response.json();
+    return data.token || data.plain_token || null;
+  } catch (error) {
+    console.error('Error creating API token:', error);
+    return null;
+  }
+}
+
+/**
+ * Get or create an API token (authenticates if needed)
+ */
+export async function getApiToken(
+  page: Page,
+  slug: string,
+  permissions: string[]
+): Promise<string | null> {
+  // First authenticate as admin
+  await authenticateAsAdmin(page, slug);
+
+  // Then create the token
+  return createApiToken(page, slug, permissions);
+}
