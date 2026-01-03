@@ -161,14 +161,17 @@ class AdminController
         $brigade = AdminAuth::requireAuth($slug);
         $data = json_decode(file_get_contents('php://input'), true);
 
+        $displayName = trim($data['display_name'] ?? '');
         $memberData = [
             'brigade_id' => $brigade['id'],
-            'display_name' => trim($data['display_name'] ?? ''),
+            'name' => $displayName,
+            'display_name' => $displayName,
             'rank' => trim($data['rank'] ?? ''),
             'first_name' => trim($data['first_name'] ?? ''),
             'last_name' => trim($data['last_name'] ?? ''),
             'email' => trim($data['email'] ?? ''),
             'is_active' => 1,
+            'created_at' => date('Y-m-d H:i:s'),
         ];
 
         if (!empty($data['join_date'])) {
