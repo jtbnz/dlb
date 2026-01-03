@@ -17,7 +17,26 @@
  *   4. Create missing members as inactive
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
+// Check autoloader exists before requiring
+$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    echo "ERROR: Composer autoload not found at: $autoloadPath\n";
+    echo "Please run 'composer install' in the project root directory first.\n";
+    exit(1);
+}
+
+require_once $autoloadPath;
+
+// Check PhpSpreadsheet is installed
+if (!class_exists('PhpOffice\PhpSpreadsheet\IOFactory')) {
+    echo "ERROR: PhpSpreadsheet is not installed.\n";
+    echo "Please run 'composer install' to install dependencies.\n";
+    exit(1);
+}
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
