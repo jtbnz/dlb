@@ -35,3 +35,8 @@ data/*.backup
 
 # Temporary test files
 /tmp/
+
+# Import data files
+import/*.xlsx
+import/*.csv
+import/.venv/
