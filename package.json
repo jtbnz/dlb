@@ -1,0 +1,24 @@
+{
+  "name": "dlb-testing",
+  "version": "1.0.0",
+  "description": "Comprehensive testing suite for DLB Fire Brigade Attendance System",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:local": "BASE_URL=http://localhost:8080/dlb playwright test",
+    "test:prod": "BASE_URL=https://kiaora.tech/dlb BRIGADE_SLUG=demo playwright test --project=production",
+    "test:unit": "php vendor/bin/phpunit --configuration phpunit.xml",
+    "test:all": "npm run test:unit && npm run test",
+    "serve": "php -S localhost:8080 -t public",
+    "serve:subdirectory": "php -S localhost:8080 router.php"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
