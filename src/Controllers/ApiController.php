@@ -461,6 +461,7 @@ class ApiController
 
         $memberData = [
             'brigade_id' => $brigade['id'],
+            'name' => trim($data['name']),
             'display_name' => trim($data['name']),
             'rank' => trim($data['rank'] ?? ''),
             'first_name' => trim($data['first_name'] ?? ''),
