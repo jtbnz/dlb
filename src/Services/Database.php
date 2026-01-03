@@ -214,6 +214,14 @@ class Database
 
         // Create index for api_tokens
         $this->pdo->exec("CREATE INDEX IF NOT EXISTS idx_api_tokens_brigade ON api_tokens(brigade_id)");
+
+        // Add token_prefix column to api_tokens for faster lookups
+        $tokenColumns = $this->query("PRAGMA table_info(api_tokens)");
+        $tokenColumnNames = array_column($tokenColumns, 'name');
+        if (!in_array('token_prefix', $tokenColumnNames)) {
+            $this->pdo->exec("ALTER TABLE api_tokens ADD COLUMN token_prefix VARCHAR(16)");
+            $this->pdo->exec("CREATE INDEX IF NOT EXISTS idx_api_tokens_prefix ON api_tokens(brigade_id, token_prefix)");
+        }
     }
 
     public function initializeSchema(): void

@@ -48,6 +48,7 @@ class ApiToken
         }
 
         $slug = $matches[1];
+        $tokenHash = $matches[2];
 
         // Find brigade by slug
         $brigade = Brigade::findBySlug($slug);
@@ -55,13 +56,39 @@ class ApiToken
             return null;
         }
 
-        // Get all tokens for this brigade
+        // Use token prefix for quick lookup (first 16 chars of the hash)
+        $tokenPrefix = substr($tokenHash, 0, 16);
+
+        // Try to find by prefix first (if column exists)
+        $tokenRecord = db()->queryOne(
+            "SELECT * FROM api_tokens WHERE brigade_id = ? AND token_prefix = ?",
+            [$brigade['id'], $tokenPrefix]
+        );
+
+        // If found by prefix, verify the full token
+        if ($tokenRecord && password_verify($token, $tokenRecord['token_hash'])) {
+            // Check expiration
+            if ($tokenRecord['expires_at'] && strtotime($tokenRecord['expires_at']) < time()) {
+                return null;
+            }
+
+            // Update last used
+            db()->update('api_tokens', [
+                'last_used_at' => date('Y-m-d H:i:s'),
+            ], 'id = ?', [$tokenRecord['id']]);
+
+            $tokenRecord['brigade'] = $brigade;
+            $tokenRecord['permissions_array'] = json_decode($tokenRecord['permissions'], true) ?? [];
+
+            return $tokenRecord;
+        }
+
+        // Fallback: check all tokens for this brigade (for tokens without prefix)
         $tokens = db()->query(
-            "SELECT * FROM api_tokens WHERE brigade_id = ?",
+            "SELECT * FROM api_tokens WHERE brigade_id = ? AND (token_prefix IS NULL OR token_prefix = '')",
             [$brigade['id']]
         );
 
-        // Check each token hash
         foreach ($tokens as $tokenRecord) {
             if (password_verify($token, $tokenRecord['token_hash'])) {
                 // Check expiration
@@ -69,9 +96,10 @@ class ApiToken
                     return null;
                 }
 
-                // Update last used
+                // Update last used and add prefix for future lookups
                 db()->update('api_tokens', [
                     'last_used_at' => date('Y-m-d H:i:s'),
+                    'token_prefix' => $tokenPrefix,
                 ], 'id = ?', [$tokenRecord['id']]);
 
                 $tokenRecord['brigade'] = $brigade;
@@ -108,6 +136,9 @@ class ApiToken
         $randomPart = bin2hex(random_bytes(32));
         $plainToken = sprintf('dlb_%s_%s', $brigade['slug'], $randomPart);
 
+        // Store token prefix for fast lookups (first 16 chars of the random part)
+        $tokenPrefix = substr($randomPart, 0, 16);
+
         // Hash the token for storage
         $tokenHash = password_hash($plainToken, PASSWORD_DEFAULT);
 
@@ -117,6 +148,7 @@ class ApiToken
         $id = db()->insert('api_tokens', [
             'brigade_id' => $brigadeId,
             'token_hash' => $tokenHash,
+            'token_prefix' => $tokenPrefix,
             'name' => $name,
             'permissions' => json_encode(array_values($validPermissions)),
             'expires_at' => $expiresAt,
