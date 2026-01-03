@@ -26,7 +26,7 @@ test.describe('Brigade Settings', () => {
 
   test.beforeEach(async ({ page }) => {
     await authenticateAsAdmin(page, slug);
-    await page.goto(`/${slug}/admin/settings`);
+    await page.goto(`${slug}/admin/settings`);
     await waitForPageLoad(page);
   });
 
@@ -36,7 +36,7 @@ test.describe('Brigade Settings', () => {
   });
 
   test('should load settings via API', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/settings`);
+    const response = await page.request.get(`${slug}/admin/api/settings`);
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
@@ -44,7 +44,7 @@ test.describe('Brigade Settings', () => {
   });
 
   test('should update brigade settings', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings`, {
+    const response = await page.request.put(`${slug}/admin/api/settings`, {
       data: JSON.stringify({
         include_non_attendees: true,
       }),
@@ -55,7 +55,7 @@ test.describe('Brigade Settings', () => {
   });
 
   test('should update email recipients', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings`, {
+    const response = await page.request.put(`${slug}/admin/api/settings`, {
       data: JSON.stringify({
         email_recipients: testSettings.email_recipients,
       }),
@@ -66,7 +66,7 @@ test.describe('Brigade Settings', () => {
   });
 
   test('should update member ordering preference', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings`, {
+    const response = await page.request.put(`${slug}/admin/api/settings`, {
       data: JSON.stringify({
         member_order: 'alphabetical',
       }),
@@ -89,7 +89,7 @@ test.describe('PIN Management', () => {
   test('should update brigade PIN', async ({ page }) => {
     const newPin = '5678';
 
-    const response = await page.request.put(`/${slug}/admin/api/settings/pin`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/pin`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_pin: newPin,
@@ -100,7 +100,7 @@ test.describe('PIN Management', () => {
     expect(response.ok()).toBeTruthy();
 
     // Restore original PIN
-    await page.request.put(`/${slug}/admin/api/settings/pin`, {
+    await page.request.put(`${slug}/admin/api/settings/pin`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_pin: demoBrigade.pin,
@@ -110,7 +110,7 @@ test.describe('PIN Management', () => {
   });
 
   test('should reject PIN change without password', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings/pin`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/pin`, {
       data: JSON.stringify({
         new_pin: '9999',
       }),
@@ -122,7 +122,7 @@ test.describe('PIN Management', () => {
 
   test('should validate PIN format', async ({ page }) => {
     // Test too short PIN
-    const response = await page.request.put(`/${slug}/admin/api/settings/pin`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/pin`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_pin: '12', // Too short
@@ -146,7 +146,7 @@ test.describe('Password Management', () => {
   test('should update admin password', async ({ page }) => {
     const newPassword = 'newpassword123';
 
-    const response = await page.request.put(`/${slug}/admin/api/settings/password`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/password`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_password: newPassword,
@@ -158,7 +158,7 @@ test.describe('Password Management', () => {
     expect(response.ok()).toBeTruthy();
 
     // Restore original password
-    await page.request.put(`/${slug}/admin/api/settings/password`, {
+    await page.request.put(`${slug}/admin/api/settings/password`, {
       data: JSON.stringify({
         current_password: newPassword,
         new_password: demoBrigade.adminPassword,
@@ -169,7 +169,7 @@ test.describe('Password Management', () => {
   });
 
   test('should reject password change with wrong current password', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings/password`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/password`, {
       data: JSON.stringify({
         current_password: 'wrongpassword',
         new_password: 'newpassword123',
@@ -182,7 +182,7 @@ test.describe('Password Management', () => {
   });
 
   test('should enforce minimum password length', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings/password`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/password`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_password: 'short', // Too short
@@ -195,7 +195,7 @@ test.describe('Password Management', () => {
   });
 
   test('should require password confirmation match', async ({ page }) => {
-    const response = await page.request.put(`/${slug}/admin/api/settings/password`, {
+    const response = await page.request.put(`${slug}/admin/api/settings/password`, {
       data: JSON.stringify({
         current_password: demoBrigade.adminPassword,
         new_password: 'newpassword123',
@@ -216,7 +216,7 @@ test.describe('QR Code Generation', () => {
   });
 
   test('should generate QR code', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/qrcode`);
+    const response = await page.request.get(`${slug}/admin/api/qrcode`);
     expect(response.ok()).toBeTruthy();
 
     // Should return HTML or image
@@ -225,7 +225,7 @@ test.describe('QR Code Generation', () => {
   });
 
   test('should download QR code as PNG', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/qrcode/download`);
+    const response = await page.request.get(`${slug}/admin/api/qrcode/download`);
     expect(response.ok()).toBeTruthy();
 
     // Should return PNG image
@@ -244,7 +244,7 @@ test.describe('Backup and Restore', () => {
   });
 
   test('should download database backup', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/backup`);
+    const response = await page.request.get(`${slug}/admin/api/backup`);
     expect(response.ok()).toBeTruthy();
 
     // Should return SQLite file
@@ -255,7 +255,7 @@ test.describe('Backup and Restore', () => {
   test('should have restore endpoint', async ({ page }) => {
     // Test that restore endpoint exists (don't actually restore)
     // This just verifies the route is defined
-    const response = await page.request.post(`/${slug}/admin/api/restore`, {
+    const response = await page.request.post(`${slug}/admin/api/restore`, {
       data: '',
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -273,7 +273,7 @@ test.describe('Audit Log', () => {
   });
 
   test('should display audit log page', async ({ page }) => {
-    await page.goto(`/${slug}/admin/audit`);
+    await page.goto(`${slug}/admin/audit`);
     await waitForPageLoad(page);
 
     // Should show audit log heading
@@ -281,7 +281,7 @@ test.describe('Audit Log', () => {
   });
 
   test('should load audit log via API', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/audit`);
+    const response = await page.request.get(`${slug}/admin/api/audit`);
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
@@ -289,18 +289,18 @@ test.describe('Audit Log', () => {
   });
 
   test('should filter audit log by action', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/audit?action=attendance_added`);
+    const response = await page.request.get(`${slug}/admin/api/audit?action=attendance_added`);
     expect(response.ok()).toBeTruthy();
   });
 
   test('should filter audit log by date range', async ({ page }) => {
     const today = new Date().toISOString().split('T')[0];
-    const response = await page.request.get(`/${slug}/admin/api/audit?from=${today}&to=${today}`);
+    const response = await page.request.get(`${slug}/admin/api/audit?from=${today}&to=${today}`);
     expect(response.ok()).toBeTruthy();
   });
 
   test('audit entries should have required fields', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/audit`);
+    const response = await page.request.get(`${slug}/admin/api/audit`);
     const data = await response.json();
 
     const logs = data.logs || data.audit || data;
@@ -354,7 +354,7 @@ test.describe('Super Admin Brigade Management', () => {
       const testBrigade = brigades.find((b: any) => b.slug?.startsWith('test-'));
 
       if (testBrigade) {
-        const response = await page.request.put(`/admin/api/brigades/${testBrigade.id}`, {
+        const response = await page.request.put(`admin/api/brigades/${testBrigade.id}`, {
           data: JSON.stringify({
             name: `Updated Brigade ${Date.now()}`,
           }),
@@ -382,7 +382,7 @@ test.describe('Super Admin Brigade Management', () => {
     const brigadeId = created.brigade?.id || created.id;
 
     if (brigadeId) {
-      const deleteResponse = await page.request.delete(`/admin/api/brigades/${brigadeId}`);
+      const deleteResponse = await page.request.delete(`admin/api/brigades/${brigadeId}`);
       expect(deleteResponse.ok()).toBeTruthy();
     }
   });
@@ -459,7 +459,7 @@ test.describe('Admin Navigation', () => {
   });
 
   test('should show consistent navigation across pages', async ({ page }) => {
-    await page.goto(`/${slug}/admin/dashboard`);
+    await page.goto(`${slug}/admin/dashboard`);
     await waitForPageLoad(page);
 
     // Check for navigation elements

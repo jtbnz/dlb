@@ -23,7 +23,7 @@ test.describe('PIN Authentication', () => {
   const slug = getBrigadeSlug();
 
   test('should display PIN entry page for brigade', async ({ page }) => {
-    await page.goto(`/${slug}`);
+    await page.goto(slug);
 
     // Should show brigade name and PIN form
     await expect(page.locator('h1, h2, .brigade-name')).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('PIN Authentication', () => {
   });
 
   test('should reject invalid PIN', async ({ page }) => {
-    await page.goto(`/${slug}`);
+    await page.goto(`${slug}`);
 
     // Enter wrong PIN
     await page.locator('input[name="pin"], input[type="password"]').first().fill('9999');
@@ -56,8 +56,8 @@ test.describe('PIN Authentication', () => {
     await authenticateWithPin(page, slug, demoBrigade.pin);
 
     // Navigate away and back
-    await page.goto(`/${slug}/history`);
-    await page.goto(`/${slug}/attendance`);
+    await page.goto(`${slug}/history`);
+    await page.goto(`${slug}/attendance`);
 
     // Should still be authenticated (not redirected to PIN)
     await expect(page).toHaveURL(new RegExp(`/${slug}/attendance`));
@@ -75,7 +75,7 @@ test.describe('Admin Authentication', () => {
   const slug = getBrigadeSlug();
 
   test('should display admin login page', async ({ page }) => {
-    await page.goto(`/${slug}/admin`);
+    await page.goto(`${slug}/admin`);
 
     // Should show login form
     await expect(page.locator('input[name="username"]')).toBeVisible();
@@ -84,7 +84,7 @@ test.describe('Admin Authentication', () => {
   });
 
   test('should reject invalid admin credentials', async ({ page }) => {
-    await page.goto(`/${slug}/admin`);
+    await page.goto(`${slug}/admin`);
 
     // Enter wrong credentials
     await page.locator('input[name="username"]').fill('wronguser');
@@ -129,7 +129,7 @@ test.describe('Admin Authentication', () => {
 
   test('should protect admin pages from unauthenticated access', async ({ page }) => {
     // Try to access admin dashboard directly
-    await page.goto(`/${slug}/admin/dashboard`);
+    await page.goto(`${slug}/admin/dashboard`);
 
     // Should redirect to login
     await expect(page).toHaveURL(new RegExp(`/${slug}/admin`));
@@ -138,7 +138,7 @@ test.describe('Admin Authentication', () => {
 
   test('should protect admin API endpoints', async ({ page }) => {
     // Try to access admin API without authentication
-    const response = await page.request.get(`/${slug}/admin/api/members`);
+    const response = await page.request.get(`${slug}/admin/api/members`);
 
     // Should return unauthorized or redirect
     expect([401, 403, 302]).toContain(response.status());
@@ -228,7 +228,7 @@ test.describe('Session Management', () => {
     await expect(page).toHaveURL(new RegExp(`/${slug}/admin/dashboard`));
 
     // Both sessions should work
-    await page.goto(`/${slug}/attendance`);
+    await page.goto(`${slug}/attendance`);
     await expect(page).toHaveURL(new RegExp(`/${slug}/attendance`));
   });
 });
@@ -237,7 +237,7 @@ test.describe('CSRF Protection', () => {
   const slug = getBrigadeSlug();
 
   test('should include CSRF token in forms', async ({ page }) => {
-    await page.goto(`/${slug}/admin`);
+    await page.goto(`${slug}/admin`);
 
     // Check for CSRF token in login form
     const csrfInput = page.locator('input[name="_token"], input[name="csrf_token"], input[name="_csrf"]');

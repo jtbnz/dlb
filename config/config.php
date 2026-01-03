@@ -4,7 +4,7 @@ return [
     'app' => [
         'name' => 'Brigade Attendance',
         'url' => 'http://localhost:8080',
-        'base_path' => '',  // Set to '/subdirectory' if deployed in a subdirectory (no trailing slash)
+        'base_path' => '/dlb',  // Set to '/subdirectory' if deployed in a subdirectory (no trailing slash)
         'debug' => true,
     ],
     'database' => [

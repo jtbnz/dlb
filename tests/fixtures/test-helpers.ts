@@ -35,7 +35,7 @@ export async function authenticateWithPin(
   slug: string = demoBrigade.slug,
   pin: string = demoBrigade.pin
 ): Promise<void> {
-  await page.goto(`/${slug}`);
+  await page.goto(slug);
 
   // Wait for PIN form
   await page.waitForSelector('input[name="pin"], input[type="password"]');
@@ -61,7 +61,7 @@ export async function authenticateAsAdmin(
   username: string = demoBrigade.adminUsername,
   password: string = demoBrigade.adminPassword
 ): Promise<void> {
-  await page.goto(`/${slug}/admin`);
+  await page.goto(`${slug}/admin`);
 
   // Wait for login form
   await page.waitForSelector('input[name="username"]');
@@ -85,7 +85,7 @@ export async function authenticateAsSuperAdmin(
   username: string = superAdmin.username,
   password: string = superAdmin.password
 ): Promise<void> {
-  await page.goto('/admin');
+  await page.goto('admin');
 
   // Wait for login form
   await page.waitForSelector('input[name="username"]');

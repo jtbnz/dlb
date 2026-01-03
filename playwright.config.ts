@@ -10,8 +10,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 
 // Environment configuration
-const BASE_URL = process.env.BASE_URL || 'http://localhost:8080/dlb';
-const BRIGADE_SLUG = process.env.BRIGADE_SLUG || 'demo';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8080/dlb/';
+const BRIGADE_SLUG = process.env.BRIGADE_SLUG || 'demo-brigade';
 const IS_PRODUCTION = BASE_URL.includes('kiaora.tech');
 
 export default defineConfig({

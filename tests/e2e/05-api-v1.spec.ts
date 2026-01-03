@@ -28,7 +28,7 @@ test.describe('API Token Management', () => {
   });
 
   test('should list API tokens', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/tokens`);
+    const response = await page.request.get(`${slug}/admin/api/tokens`);
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
@@ -36,7 +36,7 @@ test.describe('API Token Management', () => {
   });
 
   test('should create API token', async ({ page }) => {
-    const response = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const response = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Test Token ${Date.now()}`,
         permissions: testApiToken.permissions,
@@ -54,7 +54,7 @@ test.describe('API Token Management', () => {
 
   test('should update API token permissions', async ({ page }) => {
     // Create a token first
-    const createResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const createResponse = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Update Test Token ${Date.now()}`,
         permissions: ['musters:read'],
@@ -66,7 +66,7 @@ test.describe('API Token Management', () => {
 
     if (tokenId) {
       // Update permissions
-      const updateResponse = await page.request.put(`/${slug}/admin/api/tokens/${tokenId}`, {
+      const updateResponse = await page.request.put(`${slug}/admin/api/tokens/${tokenId}`, {
         data: JSON.stringify({
           permissions: ['musters:read', 'musters:create'],
         }),
@@ -79,7 +79,7 @@ test.describe('API Token Management', () => {
 
   test('should revoke API token', async ({ page }) => {
     // Create a token first
-    const createResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const createResponse = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Revoke Test Token ${Date.now()}`,
         permissions: ['musters:read'],
@@ -91,13 +91,13 @@ test.describe('API Token Management', () => {
 
     if (tokenId) {
       // Revoke token
-      const revokeResponse = await page.request.delete(`/${slug}/admin/api/tokens/${tokenId}`);
+      const revokeResponse = await page.request.delete(`${slug}/admin/api/tokens/${tokenId}`);
       expect(revokeResponse.ok()).toBeTruthy();
     }
   });
 
   test('should validate token permissions', async ({ page }) => {
-    const response = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const response = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Invalid Permission Token ${Date.now()}`,
         permissions: ['invalid:permission'],
@@ -120,12 +120,12 @@ test.describe('API v1 Authentication', () => {
   });
 
   test('should reject requests without token', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/api/v1/musters`);
+    const response = await page.request.get(`${slug}/api/v1/musters`);
     expect([401, 403]).toContain(response.status());
   });
 
   test('should reject requests with invalid token', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/api/v1/musters`, {
+    const response = await page.request.get(`${slug}/api/v1/musters`, {
       headers: {
         'Authorization': 'Bearer invalid_token_12345',
       },
@@ -134,7 +134,7 @@ test.describe('API v1 Authentication', () => {
   });
 
   test('should reject requests with malformed authorization header', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/api/v1/musters`, {
+    const response = await page.request.get(`${slug}/api/v1/musters`, {
       headers: {
         'Authorization': 'Basic invalid',
       },
@@ -153,7 +153,7 @@ test.describe('API v1 Muster Operations', () => {
     const page = await context.newPage();
 
     await authenticateAsAdmin(page, slug);
-    const response = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const response = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `E2E Test Token ${Date.now()}`,
         permissions: testApiToken.permissions,
@@ -173,7 +173,7 @@ test.describe('API v1 Muster Operations', () => {
       return;
     }
 
-    const response = await page.request.post(`/${slug}/api/v1/musters`, {
+    const response = await page.request.post(`${slug}/api/v1/musters`, {
       data: JSON.stringify({
         icad_number: 'muster',
         call_date: new Date().toISOString().split('T')[0],
@@ -199,7 +199,7 @@ test.describe('API v1 Muster Operations', () => {
       return;
     }
 
-    const response = await page.request.get(`/${slug}/api/v1/musters`, {
+    const response = await page.request.get(`${slug}/api/v1/musters`, {
       headers: {
         'Authorization': `Bearer ${apiToken}`,
       },
@@ -217,7 +217,7 @@ test.describe('API v1 Muster Operations', () => {
     }
 
     // Create a muster first
-    const createResponse = await page.request.post(`/${slug}/api/v1/musters`, {
+    const createResponse = await page.request.post(`${slug}/api/v1/musters`, {
       data: JSON.stringify({
         icad_number: 'muster',
         call_date: new Date().toISOString().split('T')[0],
@@ -232,7 +232,7 @@ test.describe('API v1 Muster Operations', () => {
     const musterId = created.muster?.id || created.id;
 
     if (musterId) {
-      const updateResponse = await page.request.put(`/${slug}/api/v1/musters/${musterId}/visibility`, {
+      const updateResponse = await page.request.put(`${slug}/api/v1/musters/${musterId}/visibility`, {
         data: JSON.stringify({ visible: true }),
         headers: {
           'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ test.describe('API v1 Attendance Operations', () => {
 
     // Get or create token
     await authenticateAsAdmin(page, slug);
-    const tokenResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Attendance Test Token ${Date.now()}`,
         permissions: testApiToken.permissions,
@@ -268,7 +268,7 @@ test.describe('API v1 Attendance Operations', () => {
     apiToken = tokenData.token || tokenData.plain_token;
 
     // Get a member ID
-    const membersResponse = await page.request.get(`/${slug}/admin/api/members`);
+    const membersResponse = await page.request.get(`${slug}/admin/api/members`);
     const membersData = await membersResponse.json();
     if (membersData.members?.length > 0) {
       memberId = membersData.members[0].id;
@@ -276,7 +276,7 @@ test.describe('API v1 Attendance Operations', () => {
 
     // Create a muster for attendance tests
     if (apiToken) {
-      const musterResponse = await page.request.post(`/${slug}/api/v1/musters`, {
+      const musterResponse = await page.request.post(`${slug}/api/v1/musters`, {
         data: JSON.stringify({
           icad_number: 'muster',
           call_date: new Date().toISOString().split('T')[0],
@@ -300,7 +300,7 @@ test.describe('API v1 Attendance Operations', () => {
       return;
     }
 
-    const response = await page.request.post(`/${slug}/api/v1/musters/${musterId}/attendance`, {
+    const response = await page.request.post(`${slug}/api/v1/musters/${musterId}/attendance`, {
       data: JSON.stringify({
         member_id: memberId,
         status: attendanceStatus.LEAVE,
@@ -321,7 +321,7 @@ test.describe('API v1 Attendance Operations', () => {
       return;
     }
 
-    const response = await page.request.post(`/${slug}/api/v1/musters/${musterId}/attendance/bulk`, {
+    const response = await page.request.post(`${slug}/api/v1/musters/${musterId}/attendance/bulk`, {
       data: JSON.stringify({
         attendance: [
           { member_id: memberId, status: attendanceStatus.LEAVE, notes: 'Bulk test' },
@@ -344,7 +344,7 @@ test.describe('API v1 Attendance Operations', () => {
       return;
     }
 
-    const response = await page.request.get(`/${slug}/api/v1/musters/${musterId}/attendance`, {
+    const response = await page.request.get(`${slug}/api/v1/musters/${musterId}/attendance`, {
       headers: {
         'Authorization': `Bearer ${apiToken}`,
       },
@@ -365,7 +365,7 @@ test.describe('API v1 Member Operations', () => {
     const page = await context.newPage();
 
     await authenticateAsAdmin(page, slug);
-    const response = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const response = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Member API Test Token ${Date.now()}`,
         permissions: ['members:read', 'members:create'],
@@ -385,7 +385,7 @@ test.describe('API v1 Member Operations', () => {
       return;
     }
 
-    const response = await page.request.get(`/${slug}/api/v1/members`, {
+    const response = await page.request.get(`${slug}/api/v1/members`, {
       headers: {
         'Authorization': `Bearer ${apiToken}`,
       },
@@ -402,7 +402,7 @@ test.describe('API v1 Member Operations', () => {
       return;
     }
 
-    const response = await page.request.post(`/${slug}/api/v1/members`, {
+    const response = await page.request.post(`${slug}/api/v1/members`, {
       data: JSON.stringify({
         name: `API Created Member ${Date.now()}`,
         rank: 'FF',
@@ -422,7 +422,7 @@ test.describe('API v1 Error Handling', () => {
   const slug = getBrigadeSlug();
 
   test('should return proper error format for invalid token', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/api/v1/musters`, {
+    const response = await page.request.get(`${slug}/api/v1/musters`, {
       headers: {
         'Authorization': 'Bearer invalid_token',
       },
@@ -439,7 +439,7 @@ test.describe('API v1 Error Handling', () => {
 
     // Get a valid token
     await authenticateAsAdmin(page, slug);
-    const tokenResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `404 Test Token ${Date.now()}`,
         permissions: ['attendance:read'],
@@ -450,7 +450,7 @@ test.describe('API v1 Error Handling', () => {
     const apiToken = tokenData.token || tokenData.plain_token;
 
     if (apiToken) {
-      const response = await page.request.get(`/${slug}/api/v1/musters/99999/attendance`, {
+      const response = await page.request.get(`${slug}/api/v1/musters/99999/attendance`, {
         headers: {
           'Authorization': `Bearer ${apiToken}`,
         },
@@ -470,13 +470,13 @@ test.describe('API v1 Error Handling', () => {
     await authenticateAsAdmin(page, slug);
 
     // Get submitted callouts
-    const calloutsResponse = await page.request.get(`/${slug}/admin/api/callouts`);
+    const calloutsResponse = await page.request.get(`${slug}/admin/api/callouts`);
     const calloutsData = await calloutsResponse.json();
     const submittedCallout = calloutsData.callouts?.find((c: any) => c.status === 'submitted');
 
     if (submittedCallout) {
       // Get token
-      const tokenResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+      const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
         data: JSON.stringify({
           name: `Submitted Test Token ${Date.now()}`,
           permissions: ['attendance:create'],
@@ -488,7 +488,7 @@ test.describe('API v1 Error Handling', () => {
 
       if (apiToken) {
         // Try to add attendance to submitted callout
-        const response = await page.request.post(`/${slug}/api/v1/musters/${submittedCallout.id}/attendance`, {
+        const response = await page.request.post(`${slug}/api/v1/musters/${submittedCallout.id}/attendance`, {
           data: JSON.stringify({ member_id: 1, status: 'L' }),
           headers: {
             'Content-Type': 'application/json',
@@ -514,7 +514,7 @@ test.describe('API v1 Permission Enforcement', () => {
     await authenticateAsAdmin(page, slug);
 
     // Create token with limited permissions
-    const tokenResponse = await page.request.post(`/${slug}/admin/api/tokens`, {
+    const tokenResponse = await page.request.post(`${slug}/admin/api/tokens`, {
       data: JSON.stringify({
         name: `Limited Permission Token ${Date.now()}`,
         permissions: ['musters:read'], // Read only
@@ -526,7 +526,7 @@ test.describe('API v1 Permission Enforcement', () => {
 
     if (apiToken) {
       // Try to create a muster (requires musters:create)
-      const response = await page.request.post(`/${slug}/api/v1/musters`, {
+      const response = await page.request.post(`${slug}/api/v1/musters`, {
         data: JSON.stringify({
           icad_number: 'muster',
           call_date: new Date().toISOString().split('T')[0],

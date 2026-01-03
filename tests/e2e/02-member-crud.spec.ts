@@ -25,7 +25,7 @@ test.describe('Member Management', () => {
   test.beforeEach(async ({ page }) => {
     await authenticateAsAdmin(page, slug);
     // Navigate to members page
-    await page.goto(`/${slug}/admin/members`);
+    await page.goto(`${slug}/admin/members`);
     await waitForPageLoad(page);
   });
 
@@ -39,7 +39,7 @@ test.describe('Member Management', () => {
     });
 
     test('should load members via API', async ({ page }) => {
-      const response = await page.request.get(`/${slug}/admin/api/members`);
+      const response = await page.request.get(`${slug}/admin/api/members`);
       expect(response.ok()).toBeTruthy();
 
       const data = await response.json();
@@ -121,7 +121,7 @@ test.describe('Member Management', () => {
         rank: 'QFF',
       };
 
-      const response = await page.request.post(`/${slug}/admin/api/members`, {
+      const response = await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify(testMember),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -136,7 +136,7 @@ test.describe('Member Management', () => {
     test('should update member name', async ({ page }) => {
       // First create a member
       const originalName = `Update Test ${Date.now()}`;
-      await page.request.post(`/${slug}/admin/api/members`, {
+      await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: originalName, rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -169,7 +169,7 @@ test.describe('Member Management', () => {
 
     test('should update member via API', async ({ page }) => {
       // Create a member first
-      const createResponse = await page.request.post(`/${slug}/admin/api/members`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: `API Update Test ${Date.now()}`, rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -178,7 +178,7 @@ test.describe('Member Management', () => {
 
       if (memberId) {
         // Update via API
-        const updateResponse = await page.request.put(`/${slug}/admin/api/members/${memberId}`, {
+        const updateResponse = await page.request.put(`${slug}/admin/api/members/${memberId}`, {
           data: JSON.stringify({ name: `Updated via API ${Date.now()}`, rank: 'SFF' }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -194,7 +194,7 @@ test.describe('Member Management', () => {
     test('should deactivate member (soft delete)', async ({ page }) => {
       // Create a test member
       const memberName = `Delete Test ${Date.now()}`;
-      const createResponse = await page.request.post(`/${slug}/admin/api/members`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: memberName, rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -203,7 +203,7 @@ test.describe('Member Management', () => {
 
       if (memberId) {
         // Delete via API
-        const deleteResponse = await page.request.delete(`/${slug}/admin/api/members/${memberId}`);
+        const deleteResponse = await page.request.delete(`${slug}/admin/api/members/${memberId}`);
         expect(deleteResponse.ok()).toBeTruthy();
 
         // Reload and verify member is deactivated/removed
@@ -212,7 +212,7 @@ test.describe('Member Management', () => {
 
         // Member should either be removed from active list or marked as inactive
         // Check that they're not in the active members list
-        const activeMembers = await page.request.get(`/${slug}/admin/api/members?active=true`);
+        const activeMembers = await page.request.get(`${slug}/admin/api/members?active=true`);
         const data = await activeMembers.json();
         const memberStillActive = data.members?.some((m: any) => m.id === memberId && m.is_active);
         expect(memberStillActive).toBeFalsy();
@@ -237,7 +237,7 @@ test.describe('Member Management', () => {
     });
 
     test('should import members via API', async ({ page }) => {
-      const response = await page.request.post(`/${slug}/admin/api/members/import`, {
+      const response = await page.request.post(`${slug}/admin/api/members/import`, {
         data: JSON.stringify({ csv: csvImportData }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -250,8 +250,8 @@ test.describe('Member Management', () => {
   test.describe('Member Ordering', () => {
     test('should support different member ordering options', async ({ page }) => {
       // Get members with different orderings
-      const rankNameResponse = await page.request.get(`/${slug}/admin/api/members?order=rank_name`);
-      const alphabeticalResponse = await page.request.get(`/${slug}/admin/api/members?order=alphabetical`);
+      const rankNameResponse = await page.request.get(`${slug}/admin/api/members?order=rank_name`);
+      const alphabeticalResponse = await page.request.get(`${slug}/admin/api/members?order=alphabetical`);
 
       expect(rankNameResponse.ok()).toBeTruthy();
       expect(alphabeticalResponse.ok()).toBeTruthy();
@@ -260,7 +260,7 @@ test.describe('Member Management', () => {
 
   test.describe('Member Validation', () => {
     test('should reject empty member name', async ({ page }) => {
-      const response = await page.request.post(`/${slug}/admin/api/members`, {
+      const response = await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: '', rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -273,13 +273,13 @@ test.describe('Member Management', () => {
       const memberName = `Duplicate Test ${Date.now()}`;
 
       // Create first member
-      await page.request.post(`/${slug}/admin/api/members`, {
+      await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: memberName, rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });
 
       // Try to create duplicate
-      const response = await page.request.post(`/${slug}/admin/api/members`, {
+      const response = await page.request.post(`${slug}/admin/api/members`, {
         data: JSON.stringify({ name: memberName, rank: 'FF' }),
         headers: { 'Content-Type': 'application/json' },
       });

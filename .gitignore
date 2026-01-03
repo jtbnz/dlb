@@ -21,3 +21,16 @@ Thumbs.db
 # Dependencies (if any)
 vendor/
 node_modules/
+
+# Test results and artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+.phpunit.cache/
+coverage/
+
+# Database backups created during testing
+data/*.backup
+
+# Temporary test files
+/tmp/

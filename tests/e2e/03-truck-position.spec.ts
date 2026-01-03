@@ -24,7 +24,7 @@ test.describe('Truck Management', () => {
 
   test.beforeEach(async ({ page }) => {
     await authenticateAsAdmin(page, slug);
-    await page.goto(`/${slug}/admin/trucks`);
+    await page.goto(`${slug}/admin/trucks`);
     await waitForPageLoad(page);
   });
 
@@ -38,7 +38,7 @@ test.describe('Truck Management', () => {
     });
 
     test('should load trucks via API', async ({ page }) => {
-      const response = await page.request.get(`/${slug}/admin/api/trucks`);
+      const response = await page.request.get(`${slug}/admin/api/trucks`);
       expect(response.ok()).toBeTruthy();
 
       const data = await response.json();
@@ -123,7 +123,7 @@ test.describe('Truck Management', () => {
     });
 
     test('should create truck via API', async ({ page }) => {
-      const response = await page.request.post(`/${slug}/admin/api/trucks`, {
+      const response = await page.request.post(`${slug}/admin/api/trucks`, {
         data: JSON.stringify({ name: `API Truck ${Date.now()}`, is_station: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -137,7 +137,7 @@ test.describe('Truck Management', () => {
   test.describe('Update Truck', () => {
     test('should update truck name via API', async ({ page }) => {
       // Create a truck first
-      const createResponse = await page.request.post(`/${slug}/admin/api/trucks`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/trucks`, {
         data: JSON.stringify({ name: `Update Test Truck ${Date.now()}`, is_station: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -146,7 +146,7 @@ test.describe('Truck Management', () => {
 
       if (truckId) {
         // Update via API
-        const updateResponse = await page.request.put(`/${slug}/admin/api/trucks/${truckId}`, {
+        const updateResponse = await page.request.put(`${slug}/admin/api/trucks/${truckId}`, {
           data: JSON.stringify({ name: `Updated Truck ${Date.now()}` }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -161,7 +161,7 @@ test.describe('Truck Management', () => {
 
     test('should delete truck via API', async ({ page }) => {
       // Create a truck first
-      const createResponse = await page.request.post(`/${slug}/admin/api/trucks`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/trucks`, {
         data: JSON.stringify({ name: `Delete Test Truck ${Date.now()}`, is_station: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -170,11 +170,11 @@ test.describe('Truck Management', () => {
 
       if (truckId) {
         // Delete via API
-        const deleteResponse = await page.request.delete(`/${slug}/admin/api/trucks/${truckId}`);
+        const deleteResponse = await page.request.delete(`${slug}/admin/api/trucks/${truckId}`);
         expect(deleteResponse.ok()).toBeTruthy();
 
         // Verify truck is deleted
-        const listResponse = await page.request.get(`/${slug}/admin/api/trucks`);
+        const listResponse = await page.request.get(`${slug}/admin/api/trucks`);
         const data = await listResponse.json();
         const truckStillExists = data.trucks?.some((t: any) => t.id === truckId);
         expect(truckStillExists).toBeFalsy();
@@ -185,7 +185,7 @@ test.describe('Truck Management', () => {
   test.describe('Truck Reordering', () => {
     test('should reorder trucks via API', async ({ page }) => {
       // Get current trucks
-      const listResponse = await page.request.get(`/${slug}/admin/api/trucks`);
+      const listResponse = await page.request.get(`${slug}/admin/api/trucks`);
       const data = await listResponse.json();
       const trucks = data.trucks || [];
 
@@ -193,7 +193,7 @@ test.describe('Truck Management', () => {
         // Reverse the order
         const newOrder = trucks.map((t: any) => t.id).reverse();
 
-        const reorderResponse = await page.request.put(`/${slug}/admin/api/trucks/reorder`, {
+        const reorderResponse = await page.request.put(`${slug}/admin/api/trucks/reorder`, {
           data: JSON.stringify({ order: newOrder }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -212,14 +212,14 @@ test.describe('Position Management', () => {
     await authenticateAsAdmin(page, slug);
 
     // Create a test truck for position tests
-    const createResponse = await page.request.post(`/${slug}/admin/api/trucks`, {
+    const createResponse = await page.request.post(`${slug}/admin/api/trucks`, {
       data: JSON.stringify({ name: `Position Test Truck ${Date.now()}`, is_station: false }),
       headers: { 'Content-Type': 'application/json' },
     });
     const created = await createResponse.json();
     testTruckId = created.truck?.id || created.id;
 
-    await page.goto(`/${slug}/admin/trucks`);
+    await page.goto(`${slug}/admin/trucks`);
     await waitForPageLoad(page);
   });
 
@@ -230,7 +230,7 @@ test.describe('Position Management', () => {
         return;
       }
 
-      const response = await page.request.post(`/${slug}/admin/api/trucks/${testTruckId}/positions`, {
+      const response = await page.request.post(`${slug}/admin/api/trucks/${testTruckId}/positions`, {
         data: JSON.stringify({ name: 'OIC', allow_multiple: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -247,7 +247,7 @@ test.describe('Position Management', () => {
       }
 
       for (const positionName of positionTemplates.light) {
-        const response = await page.request.post(`/${slug}/admin/api/trucks/${testTruckId}/positions`, {
+        const response = await page.request.post(`${slug}/admin/api/trucks/${testTruckId}/positions`, {
           data: JSON.stringify({ name: positionName, allow_multiple: false }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -255,7 +255,7 @@ test.describe('Position Management', () => {
       }
 
       // Verify positions were created
-      const trucksResponse = await page.request.get(`/${slug}/admin/api/trucks`);
+      const trucksResponse = await page.request.get(`${slug}/admin/api/trucks`);
       const data = await trucksResponse.json();
       const truck = data.trucks?.find((t: any) => t.id === testTruckId);
       expect(truck?.positions?.length).toBeGreaterThanOrEqual(positionTemplates.light.length);
@@ -263,7 +263,7 @@ test.describe('Position Management', () => {
 
     test('should create standby position with allow_multiple', async ({ page }) => {
       // Create a station truck
-      const stationResponse = await page.request.post(`/${slug}/admin/api/trucks`, {
+      const stationResponse = await page.request.post(`${slug}/admin/api/trucks`, {
         data: JSON.stringify({ name: `Station Test ${Date.now()}`, is_station: true }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -272,7 +272,7 @@ test.describe('Position Management', () => {
 
       if (stationId) {
         // Create standby position
-        const response = await page.request.post(`/${slug}/admin/api/trucks/${stationId}/positions`, {
+        const response = await page.request.post(`${slug}/admin/api/trucks/${stationId}/positions`, {
           data: JSON.stringify({ name: 'Standby', allow_multiple: true }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -290,7 +290,7 @@ test.describe('Position Management', () => {
       }
 
       // Create a position first
-      const createResponse = await page.request.post(`/${slug}/admin/api/trucks/${testTruckId}/positions`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/trucks/${testTruckId}/positions`, {
         data: JSON.stringify({ name: 'Update Test Position', allow_multiple: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -299,7 +299,7 @@ test.describe('Position Management', () => {
 
       if (positionId) {
         // Update position
-        const updateResponse = await page.request.put(`/${slug}/admin/api/positions/${positionId}`, {
+        const updateResponse = await page.request.put(`${slug}/admin/api/positions/${positionId}`, {
           data: JSON.stringify({ name: 'Updated Position' }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -319,7 +319,7 @@ test.describe('Position Management', () => {
       }
 
       // Create a position first
-      const createResponse = await page.request.post(`/${slug}/admin/api/trucks/${testTruckId}/positions`, {
+      const createResponse = await page.request.post(`${slug}/admin/api/trucks/${testTruckId}/positions`, {
         data: JSON.stringify({ name: 'Delete Test Position', allow_multiple: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -328,7 +328,7 @@ test.describe('Position Management', () => {
 
       if (positionId) {
         // Delete position
-        const deleteResponse = await page.request.delete(`/${slug}/admin/api/positions/${positionId}`);
+        const deleteResponse = await page.request.delete(`${slug}/admin/api/positions/${positionId}`);
         expect(deleteResponse.ok()).toBeTruthy();
       }
     });
@@ -341,7 +341,7 @@ test.describe('Position Management', () => {
         return;
       }
 
-      const response = await page.request.post(`/${slug}/admin/api/trucks/${testTruckId}/positions`, {
+      const response = await page.request.post(`${slug}/admin/api/trucks/${testTruckId}/positions`, {
         data: JSON.stringify({ name: '', allow_multiple: false }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -359,7 +359,7 @@ test.describe('Truck/Position Integration', () => {
   });
 
   test('trucks should include positions in API response', async ({ page }) => {
-    const response = await page.request.get(`/${slug}/admin/api/trucks`);
+    const response = await page.request.get(`${slug}/admin/api/trucks`);
     const data = await response.json();
 
     // Each truck should have a positions array
@@ -371,7 +371,7 @@ test.describe('Truck/Position Integration', () => {
 
   test('position sort order should be maintained', async ({ page }) => {
     // Create a truck
-    const createResponse = await page.request.post(`/${slug}/admin/api/trucks`, {
+    const createResponse = await page.request.post(`${slug}/admin/api/trucks`, {
       data: JSON.stringify({ name: `Sort Test Truck ${Date.now()}`, is_station: false }),
       headers: { 'Content-Type': 'application/json' },
     });
@@ -381,14 +381,14 @@ test.describe('Truck/Position Integration', () => {
     if (truckId) {
       // Create positions in order
       for (let i = 0; i < positionTemplates.full.length; i++) {
-        await page.request.post(`/${slug}/admin/api/trucks/${truckId}/positions`, {
+        await page.request.post(`${slug}/admin/api/trucks/${truckId}/positions`, {
           data: JSON.stringify({ name: positionTemplates.full[i], allow_multiple: false }),
           headers: { 'Content-Type': 'application/json' },
         });
       }
 
       // Verify order
-      const trucksResponse = await page.request.get(`/${slug}/admin/api/trucks`);
+      const trucksResponse = await page.request.get(`${slug}/admin/api/trucks`);
       const data = await trucksResponse.json();
       const createdTruck = data.trucks?.find((t: any) => t.id === truckId);
 

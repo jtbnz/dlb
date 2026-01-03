@@ -39,19 +39,15 @@ async function globalSetup(config: FullConfig): Promise<void> {
   if (fs.existsSync(dbPath)) {
     console.log('   📦 Backing up existing database...');
     fs.copyFileSync(dbPath, backupPath);
-  }
-
-  // Check if we have a test database template
-  if (fs.existsSync(testDbPath)) {
-    console.log('   📋 Using test database template...');
-    fs.copyFileSync(testDbPath, dbPath);
+    console.log('   📋 Using existing database (preserves demo brigade)');
   } else {
-    // Remove existing database to start fresh
-    if (fs.existsSync(dbPath)) {
-      console.log('   🗑️  Removing existing database for fresh start...');
-      fs.unlinkSync(dbPath);
+    // Check if we have a test database template
+    if (fs.existsSync(testDbPath)) {
+      console.log('   📋 Using test database template...');
+      fs.copyFileSync(testDbPath, dbPath);
+    } else {
+      console.log('   ✨ Fresh database will be created on first request');
     }
-    console.log('   ✨ Fresh database will be created on first request');
   }
 
   // Ensure test config exists

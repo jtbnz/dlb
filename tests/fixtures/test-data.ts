@@ -5,12 +5,13 @@
  */
 
 // Demo brigade credentials (auto-created by the system)
+// Note: The slug may vary - use environment variable BRIGADE_SLUG to override
 export const demoBrigade = {
-  slug: 'demo',
-  name: 'Demo Brigade',
-  pin: '1234',
-  adminUsername: 'admin',
-  adminPassword: 'admin123',
+  slug: process.env.BRIGADE_SLUG || 'demo-brigade',
+  name: 'Demo Fire Brigade',
+  pin: process.env.DEMO_PIN || '1234',
+  adminUsername: process.env.DEMO_ADMIN || 'admin',
+  adminPassword: process.env.DEMO_PASSWORD || 'admin123',
 };
 
 // Super admin credentials (from config)
