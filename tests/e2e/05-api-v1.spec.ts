@@ -173,9 +173,11 @@ test.describe('API v1 Muster Operations', () => {
       return;
     }
 
+    // Use unique ICAD number to avoid conflicts with previous test runs
+    const uniqueIcad = `F${Date.now()}`;
     const response = await page.request.post(`${slug}/api/v1/musters`, {
       data: JSON.stringify({
-        icad_number: 'muster',
+        icad_number: uniqueIcad,
         call_date: new Date().toISOString().split('T')[0],
         call_time: '19:00',
         location: 'Station',
@@ -216,10 +218,10 @@ test.describe('API v1 Muster Operations', () => {
       return;
     }
 
-    // Create a muster first
+    // Create a muster first with unique ICAD
     const createResponse = await page.request.post(`${slug}/api/v1/musters`, {
       data: JSON.stringify({
-        icad_number: 'muster',
+        icad_number: `F${Date.now()}`,
         call_date: new Date().toISOString().split('T')[0],
         visible: false,
       }),
@@ -274,11 +276,11 @@ test.describe('API v1 Attendance Operations', () => {
       memberId = membersData.members[0].id;
     }
 
-    // Create a muster for attendance tests
+    // Create a muster for attendance tests with unique ICAD
     if (apiToken) {
       const musterResponse = await page.request.post(`${slug}/api/v1/musters`, {
         data: JSON.stringify({
-          icad_number: 'muster',
+          icad_number: `F${Date.now()}`,
           call_date: new Date().toISOString().split('T')[0],
           visible: true,
         }),
@@ -525,10 +527,10 @@ test.describe('API v1 Permission Enforcement', () => {
     const apiToken = tokenData.token || tokenData.plain_token;
 
     if (apiToken) {
-      // Try to create a muster (requires musters:create)
+      // Try to create a muster (requires musters:create) - should be rejected due to missing permission
       const response = await page.request.post(`${slug}/api/v1/musters`, {
         data: JSON.stringify({
-          icad_number: 'muster',
+          icad_number: `F${Date.now()}`,
           call_date: new Date().toISOString().split('T')[0],
         }),
         headers: {

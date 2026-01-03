@@ -65,8 +65,11 @@ test.describe('Truck Management', () => {
       // Click add truck button
       await page.locator('button, a').filter({ hasText: /add|new|create/i }).first().click();
 
-      // Should show form
-      await expect(page.locator('input[name="name"]')).toBeVisible();
+      // Wait for modal to be visible
+      await page.waitForSelector('#truck-modal[style*="flex"]', { timeout: 5000 }).catch(() => {});
+
+      // Should show form - use actual input ID from templates
+      await expect(page.locator('#truck-name, input[name="name"]')).toBeVisible();
     });
 
     test('should create a new truck', async ({ page }) => {
@@ -74,14 +77,17 @@ test.describe('Truck Management', () => {
 
       // Click add truck button
       await page.locator('button, a').filter({ hasText: /add|new|create/i }).first().click();
-      await page.waitForTimeout(500);
 
-      // Fill form
-      await page.locator('input[name="name"]').first().fill(truckName);
+      // Wait for modal to be visible
+      await page.waitForSelector('#truck-modal[style*="flex"]', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(300);
+
+      // Fill form - use actual input ID
+      await page.locator('#truck-name, input[name="name"]').first().fill(truckName);
 
       // Uncheck is_station if present
-      const stationCheckbox = page.locator('input[name="is_station"]');
-      if (await stationCheckbox.isChecked()) {
+      const stationCheckbox = page.locator('#truck-is-station, input[name="is_station"]');
+      if (await stationCheckbox.count() > 0 && await stationCheckbox.isChecked()) {
         await stationCheckbox.uncheck();
       }
 
@@ -102,13 +108,16 @@ test.describe('Truck Management', () => {
 
       // Click add truck button
       await page.locator('button, a').filter({ hasText: /add|new|create/i }).first().click();
-      await page.waitForTimeout(500);
 
-      // Fill form
-      await page.locator('input[name="name"]').first().fill(stationName);
+      // Wait for modal to be visible
+      await page.waitForSelector('#truck-modal[style*="flex"]', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(300);
+
+      // Fill form - use actual input ID
+      await page.locator('#truck-name, input[name="name"]').first().fill(stationName);
 
       // Check is_station
-      const stationCheckbox = page.locator('input[name="is_station"]');
+      const stationCheckbox = page.locator('#truck-is-station, input[name="is_station"]');
       if (await stationCheckbox.count() > 0 && !await stationCheckbox.isChecked()) {
         await stationCheckbox.check();
       }

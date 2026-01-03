@@ -38,8 +38,8 @@ test.describe('PIN Authentication', () => {
     await page.locator('input[name="pin"], input[type="password"]').first().fill('9999');
     await page.locator('button[type="submit"], input[type="submit"]').click();
 
-    // Should show error message
-    await expect(page.locator('.error, .alert-danger, [role="alert"]')).toBeVisible();
+    // Should show error message (uses .error-message class)
+    await expect(page.locator('.error-message, .error, .alert-danger, [role="alert"]')).toBeVisible();
   });
 
   test('should accept valid PIN and redirect to attendance', async ({ page }) => {
@@ -91,8 +91,8 @@ test.describe('Admin Authentication', () => {
     await page.locator('input[name="password"]').fill('wrongpassword');
     await page.locator('button[type="submit"], input[type="submit"]').click();
 
-    // Should show error and stay on login page
-    await expect(page.locator('.error, .alert-danger, [role="alert"]')).toBeVisible();
+    // Should show error and stay on login page (uses .error-message class)
+    await expect(page.locator('.error-message, .error, .alert-danger, [role="alert"]')).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/${slug}/admin`));
   });
 
