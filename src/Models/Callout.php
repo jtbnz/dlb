@@ -134,7 +134,7 @@ class Callout
         return db()->delete('callouts', 'id = ?', [$id]);
     }
 
-    public static function countForYear(int $brigadeId, int $year = null): int
+    public static function countForYear(int $brigadeId, ?int $year = null): int
     {
         $year = $year ?? (int)date('Y');
         $startOfYear = "{$year}-01-01 00:00:00";

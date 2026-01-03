@@ -467,6 +467,7 @@ class ApiController
             'last_name' => trim($data['last_name'] ?? ''),
             'email' => trim($data['email'] ?? ''),
             'is_active' => isset($data['is_active']) ? ($data['is_active'] ? 1 : 0) : 1,
+            'created_at' => date('Y-m-d H:i:s'),
         ];
 
         $id = Member::create($memberData);
