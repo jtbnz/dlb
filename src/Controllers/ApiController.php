@@ -93,10 +93,15 @@ class ApiController
         $token = ApiAuth::requireAuth($slug, 'musters:read');
         $brigade = $token['brigade'];
 
+        $limit = isset($_GET['limit']) ? min((int)$_GET['limit'], 100) : 50;
+        $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+
         $filters = [
             'status' => $_GET['status'] ?? '',
             'from_date' => $_GET['from'] ?? '',
             'to_date' => $_GET['to'] ?? '',
+            'limit' => $limit,
+            'offset' => $offset,
         ];
 
         // Use existing search method but include hidden musters for API
@@ -104,7 +109,10 @@ class ApiController
 
         $result = [];
         foreach ($musters as $muster) {
-            $attendanceCount = count(Attendance::getAssignedMemberIds($muster['id']));
+            // Get attendance count from the muster record if available, otherwise query
+            $attendanceCount = isset($muster['attendance_count'])
+                ? (int)$muster['attendance_count']
+                : count(Attendance::getAssignedMemberIds($muster['id']));
 
             $result[] = [
                 'id' => (int)$muster['id'],
@@ -124,6 +132,11 @@ class ApiController
         $this->jsonResponse([
             'success' => true,
             'musters' => $result,
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset,
+                'count' => count($result),
+            ],
         ]);
     }
 

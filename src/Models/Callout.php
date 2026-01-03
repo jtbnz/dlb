@@ -71,30 +71,42 @@ class Callout
 
     public static function search(int $brigadeId, array $filters = []): array
     {
-        $sql = "SELECT * FROM callouts WHERE brigade_id = ?";
+        $sql = "SELECT c.*, (SELECT COUNT(*) FROM attendance a WHERE a.callout_id = c.id) as attendance_count
+                FROM callouts c WHERE c.brigade_id = ?";
         $params = [$brigadeId];
 
         if (!empty($filters['icad'])) {
-            $sql .= " AND icad_number LIKE ?";
+            $sql .= " AND c.icad_number LIKE ?";
             $params[] = '%' . $filters['icad'] . '%';
         }
 
         if (!empty($filters['status'])) {
-            $sql .= " AND status = ?";
+            $sql .= " AND c.status = ?";
             $params[] = $filters['status'];
         }
 
         if (!empty($filters['from_date'])) {
-            $sql .= " AND created_at >= ?";
+            $sql .= " AND c.created_at >= ?";
             $params[] = $filters['from_date'];
         }
 
         if (!empty($filters['to_date'])) {
-            $sql .= " AND created_at <= ?";
+            $sql .= " AND c.created_at <= ?";
             $params[] = $filters['to_date'] . ' 23:59:59';
         }
 
-        $sql .= " ORDER BY created_at DESC";
+        $sql .= " ORDER BY c.created_at DESC";
+
+        // Add pagination support
+        if (!empty($filters['limit'])) {
+            $sql .= " LIMIT ?";
+            $params[] = (int)$filters['limit'];
+        }
+
+        if (!empty($filters['offset'])) {
+            $sql .= " OFFSET ?";
+            $params[] = (int)$filters['offset'];
+        }
 
         return db()->query($sql, $params);
     }
