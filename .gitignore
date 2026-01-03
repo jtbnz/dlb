@@ -18,9 +18,10 @@ Thumbs.db
 # Logs
 *.log
 
-# Dependencies (if any)
+# Dependencies
 vendor/
 node_modules/
+composer.lock
 
 # Test results and artifacts
 test-results/
