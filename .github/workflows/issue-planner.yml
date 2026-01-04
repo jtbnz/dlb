@@ -26,23 +26,32 @@ jobs:
         id: plan
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # Escape issue body for JSON
-          ISSUE_BODY=$(echo '${{ github.event.issue.body }}' | jq -Rs .)
-          
+          # Escape issue title and body for JSON using jq
+          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | jq -Rs .)
+          ESCAPED_BODY=$(echo "$ISSUE_BODY" | jq -Rs .)
+
+          # Build the prompt
+          PROMPT="You are a senior developer evaluating a GitHub issue. Analyze it and provide:\n\n1. **Summary** - What is being requested\n2. **Feasibility** - Easy/Medium/Hard and why\n3. **Implementation plan** - Numbered steps\n4. **Questions for requestor** - If clarification needed, ask as multiple choice with your recommended option first\n\nIssue Title: ${ESCAPED_TITLE}\n\nIssue Body: ${ESCAPED_BODY}"
+
+          # Make API call with properly escaped JSON
           RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
             -H "Content-Type: application/json" \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
-            -d "{
-              \"model\": \"claude-sonnet-4-20250514\",
-              \"max_tokens\": 2000,
-              \"messages\": [{
-                \"role\": \"user\",
-                \"content\": \"You are a senior developer evaluating a GitHub issue. Analyze it and provide:\\n\\n1. **Summary** - What is being requested\\n2. **Feasibility** - Easy/Medium/Hard and why\\n3. **Implementation plan** - Numbered steps\\n4. **Questions for requestor** - If clarification needed, ask as multiple choice with your recommended option first\\n\\nIssue Title: ${{ github.event.issue.title }}\\n\\nIssue Body: ${ISSUE_BODY}\"
-              }]
-            }")
-          
+            -d "$(jq -n \
+              --arg prompt "$PROMPT" \
+              '{
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 2000,
+                messages: [{
+                  role: "user",
+                  content: $prompt
+                }]
+              }')")
+
           echo "$RESPONSE" | jq -r '.content[0].text' > plan.md
 
       - name: Post plan to issue
