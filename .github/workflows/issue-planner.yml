@@ -4,6 +4,8 @@ name: AI Issue Planner
 on:
   issues:
     types: [opened, labeled]
+  issue_comment:
+    types: [created]
 
 jobs:
   plan:
@@ -60,10 +62,128 @@ jobs:
           script: |
             const fs = require('fs');
             const plan = fs.readFileSync('plan.md', 'utf8');
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: `## 🤖 AI Analysis & Implementation Plan\n\n${plan}\n\n---\n*Generated automatically*`
+            });
+
+  # Job to update plan when user replies to AI comment
+  update-plan:
+    # Only run on comments that are replies (not bot comments, not on PRs)
+    if: >
+      github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
+      github.event.comment.user.type != 'Bot'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if replying to AI plan
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get all comments on this issue
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            // Find the most recent AI plan comment
+            const aiComments = comments.data.filter(c =>
+              c.body.includes('## 🤖 AI Analysis & Implementation Plan')
+            );
+
+            if (aiComments.length === 0) {
+              console.log('No AI plan found on this issue');
+              return { shouldUpdate: false };
+            }
+
+            // Get the latest AI plan
+            const latestAiPlan = aiComments[aiComments.length - 1];
+            const currentComment = context.payload.comment;
+
+            // Check if this comment was made after the AI plan
+            const aiPlanTime = new Date(latestAiPlan.created_at);
+            const commentTime = new Date(currentComment.created_at);
+
+            if (commentTime <= aiPlanTime) {
+              console.log('Comment is older than AI plan');
+              return { shouldUpdate: false };
+            }
+
+            // Collect all user comments after the AI plan
+            const userReplies = comments.data
+              .filter(c => {
+                const cTime = new Date(c.created_at);
+                return cTime > aiPlanTime &&
+                       c.user.type !== 'Bot' &&
+                       !c.body.includes('## 🤖');
+              })
+              .map(c => c.body)
+              .join('\n\n---\n\n');
+
+            console.log('Found user replies, will update plan');
+            core.setOutput('should_update', 'true');
+            core.setOutput('ai_plan', latestAiPlan.body);
+            core.setOutput('user_replies', userReplies);
+            return { shouldUpdate: true };
+
+      - name: Checkout repo
+        if: steps.check.outputs.should_update == 'true'
+        uses: actions/checkout@v4
+
+      - name: Generate updated plan with Claude
+        if: steps.check.outputs.should_update == 'true'
+        id: update
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          AI_PLAN: ${{ steps.check.outputs.ai_plan }}
+          USER_REPLIES: ${{ steps.check.outputs.user_replies }}
+        run: |
+          # Escape all inputs for JSON using jq
+          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | jq -Rs .)
+          ESCAPED_BODY=$(echo "$ISSUE_BODY" | jq -Rs .)
+          ESCAPED_PLAN=$(echo "$AI_PLAN" | jq -Rs .)
+          ESCAPED_REPLIES=$(echo "$USER_REPLIES" | jq -Rs .)
+
+          # Build the prompt for updating the plan (single line with \n)
+          PROMPT="You are a senior developer updating an implementation plan based on user feedback.\n\nOriginal Issue Title: ${ESCAPED_TITLE}\n\nOriginal Issue Body: ${ESCAPED_BODY}\n\nPrevious AI Plan:\n${ESCAPED_PLAN}\n\nUser Responses/Clarifications:\n${ESCAPED_REPLIES}\n\nBased on the user responses, provide an UPDATED implementation plan:\n1. **Summary** - Updated understanding based on clarifications\n2. **Decisions Made** - List what was clarified by the user responses\n3. **Updated Implementation Plan** - Revised numbered steps incorporating the feedback\n4. **Remaining Questions** - If any clarification is still needed (as multiple choice with recommended option first)\n\nIf no questions remain, end with: Ready to implement - All questions resolved."
+
+          # Make API call with properly escaped JSON
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "$(jq -n \
+              --arg prompt "$PROMPT" \
+              '{
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 2000,
+                messages: [{
+                  role: "user",
+                  content: $prompt
+                }]
+              }')")
+
+          echo "$RESPONSE" | jq -r '.content[0].text' > updated_plan.md
+
+      - name: Post updated plan
+        if: steps.check.outputs.should_update == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('updated_plan.md', 'utf8');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 Updated Implementation Plan\n\n${plan}\n\n---\n*Updated based on your feedback*`
             });
