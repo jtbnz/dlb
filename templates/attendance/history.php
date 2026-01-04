@@ -140,7 +140,7 @@ function renderCalloutDetail(callout) {
             \${callout.location ? `<p><strong>Location:</strong> \${escapeHtml(callout.location)}</p>` : ''}
             \${callout.call_type ? `<p><strong>Type:</strong> \${escapeHtml(callout.call_type)}</p>` : ''}
             \${callout.duration ? `<p><strong>Duration:</strong> \${escapeHtml(callout.duration)}</p>` : ''}
-            <p><a href="https://sitrep.fireandemergency.nz/report/\${encodeURIComponent(callout.icad_number)}" target="_blank" class="sitrep-link">View SITREP Report &rarr;</a></p>
+            \${callout.icad_number && callout.icad_number.startsWith('F') ? `<p><a href="https://sitrep.fireandemergency.nz/report/\${encodeURIComponent(callout.icad_number)}" target="_blank" class="sitrep-link">View SITREP Report &rarr;</a></p>` : ''}
         </div>
         <hr>
         <h3>Attendance</h3>

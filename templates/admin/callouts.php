@@ -202,7 +202,7 @@ function renderCalloutDetails() {
         <div class="callout-edit-header">
             <h3>Incident Details</h3>
             <button class="btn btn-small" onclick="showEditInfoModal()">Edit</button>
-            <a href="https://sitrep.fireandemergency.nz/report/${encodeURIComponent(callout.icad_number)}" target="_blank" class="btn btn-small btn-primary">ICAD Report</a>
+            ${callout.icad_number && callout.icad_number.startsWith('F') ? `<a href="https://sitrep.fireandemergency.nz/report/${encodeURIComponent(callout.icad_number)}" target="_blank" class="btn btn-small btn-primary">ICAD Report</a>` : ''}
         </div>
         <div class="incident-info">
             <p><strong>Location:</strong> ${escapeHtml(callout.location) || '<em>Not set</em>'}</p>
