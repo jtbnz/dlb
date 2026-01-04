@@ -1,0 +1,60 @@
+# .github/workflows/issue-planner.yml
+name: AI Issue Planner
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  plan:
+    if: github.event.action == 'opened' || github.event.label.name == 'needs-plan'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Get repo context
+        id: context
+        run: |
+          find . -type f \( -name "*.py" -o -name "*.ts" -o -name "*.js" -o -name "*.cpp" -o -name "*.h" \) | head -50 > file_list.txt
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          cat file_list.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Generate plan with Claude
+        id: plan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Escape issue body for JSON
+          ISSUE_BODY=$(echo '${{ github.event.issue.body }}' | jq -Rs .)
+          
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "{
+              \"model\": \"claude-sonnet-4-20250514\",
+              \"max_tokens\": 2000,
+              \"messages\": [{
+                \"role\": \"user\",
+                \"content\": \"You are a senior developer evaluating a GitHub issue. Analyze it and provide:\\n\\n1. **Summary** - What is being requested\\n2. **Feasibility** - Easy/Medium/Hard and why\\n3. **Implementation plan** - Numbered steps\\n4. **Questions for requestor** - If clarification needed, ask as multiple choice with your recommended option first\\n\\nIssue Title: ${{ github.event.issue.title }}\\n\\nIssue Body: ${ISSUE_BODY}\"
+              }]
+            }")
+          
+          echo "$RESPONSE" | jq -r '.content[0].text' > plan.md
+
+      - name: Post plan to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('plan.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 AI Analysis & Implementation Plan\n\n${plan}\n\n---\n*Generated automatically*`
+            });
