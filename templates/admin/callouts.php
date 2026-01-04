@@ -14,6 +14,11 @@ ob_start();
             <option value="submitted">Submitted</option>
             <option value="locked">Locked</option>
         </select>
+        <select id="sms-filter">
+            <option value="">All SMS</option>
+            <option value="uploaded">Uploaded</option>
+            <option value="not_uploaded">Not Uploaded</option>
+        </select>
         <input type="date" id="from-date">
         <input type="date" id="to-date">
         <button class="btn" onclick="searchCallouts()">Search</button>
@@ -141,12 +146,14 @@ let moveAttendanceId = null;
 async function searchCallouts() {
     const icad = document.getElementById('icad-search').value;
     const status = document.getElementById('status-filter').value;
+    const smsStatus = document.getElementById('sms-filter').value;
     const fromDate = document.getElementById('from-date').value;
     const toDate = document.getElementById('to-date').value;
 
     const params = new URLSearchParams();
     if (icad) params.append('icad', icad);
     if (status) params.append('status', status);
+    if (smsStatus) params.append('sms_status', smsStatus);
     if (fromDate) params.append('from_date', fromDate);
     if (toDate) params.append('to_date', toDate);
 
@@ -570,6 +577,15 @@ function exportCallouts(format) {
 
 // Load on page load
 searchCallouts();
+
+// Check for view parameter to auto-open a callout
+const urlParams = new URLSearchParams(window.location.search);
+const viewId = urlParams.get('view');
+if (viewId) {
+    // Remove view param from URL to prevent re-opening on refresh
+    window.history.replaceState({}, '', window.location.pathname);
+    viewCallout(parseInt(viewId));
+}
 </script>
 <?php
 $content = ob_get_clean();

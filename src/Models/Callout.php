@@ -95,6 +95,14 @@ class Callout
             $params[] = $filters['to_date'] . ' 23:59:59';
         }
 
+        if (!empty($filters['sms_status'])) {
+            if ($filters['sms_status'] === 'uploaded') {
+                $sql .= " AND c.sms_uploaded = 1";
+            } elseif ($filters['sms_status'] === 'not_uploaded') {
+                $sql .= " AND (c.sms_uploaded = 0 OR c.sms_uploaded IS NULL)";
+            }
+        }
+
         $sql .= " ORDER BY c.created_at DESC";
 
         // Add pagination support

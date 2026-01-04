@@ -411,6 +411,7 @@ class AdminController
         $filters = [
             'icad' => $_GET['icad'] ?? '',
             'status' => $_GET['status'] ?? '',
+            'sms_status' => $_GET['sms_status'] ?? '',
             'from_date' => $_GET['from_date'] ?? '',
             'to_date' => $_GET['to_date'] ?? '',
         ];

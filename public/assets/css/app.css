@@ -899,6 +899,30 @@ input:focus, select:focus, textarea:focus {
     color: #991b1b;
 }
 
+/* SMS Status */
+.sms-status {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.sms-uploaded {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.sms-not-uploaded {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Clickable table rows */
+.clickable-rows tbody tr:hover {
+    background: var(--gray-100);
+}
+
 /* Toolbar */
 .toolbar {
     display: flex;
