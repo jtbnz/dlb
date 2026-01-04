@@ -1271,10 +1271,28 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ===== History Page ===== */
+html:has(.history-page) {
+    /* Ensure html allows scrolling on iOS */
+    height: 100%;
+    overflow: auto;
+}
+
+.history-page {
+    /* iOS Safari scrolling fix - ensure body scrolls properly */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 100vh;
+    min-height: 100dvh; /* Use dynamic viewport height for iOS */
+    /* Prevent iOS from blocking scroll on orientation change */
+    position: relative;
+}
+
 .history-container {
     max-width: 800px;
     margin: 0 auto;
     padding: 1rem;
+    /* Ensure content doesn't get cut off on mobile */
+    padding-bottom: 2rem;
 }
 
 .history-header {
