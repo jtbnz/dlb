@@ -503,6 +503,29 @@ class AdminController
         json_response(['success' => true]);
     }
 
+    public function apiUpdateSmsStatus(string $slug, string $calloutId): void
+    {
+        $brigade = AdminAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $smsUploaded = isset($data['sms_uploaded']) ? (bool)$data['sms_uploaded'] : false;
+
+        Callout::updateSmsStatus((int)$calloutId, $smsUploaded, $data['updated_by'] ?? 'Unknown');
+
+        audit_log($brigade['id'], (int)$calloutId, 'sms_status_updated', [
+            'sms_uploaded' => $smsUploaded,
+            'updated_by' => $data['updated_by'] ?? 'Unknown'
+        ]);
+
+        json_response(['success' => true, 'sms_uploaded' => $smsUploaded]);
+    }
+
     public function apiDeleteCallout(string $slug, string $calloutId): void
     {
         $brigade = AdminAuth::requireAuth($slug);

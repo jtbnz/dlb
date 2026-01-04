@@ -211,6 +211,14 @@ function renderCalloutDetails() {
             ${callout.fenz_fetched_at ? `<p class="fenz-fetched"><small>Data fetched: ${formatDate(callout.fenz_fetched_at)}</small></p>` : '<p class="fenz-pending"><small>FENZ data not yet fetched</small></p>'}
         </div>
         <hr>
+        <div class="sms-upload-section">
+            <label class="sms-checkbox-label">
+                <input type="checkbox" id="sms-uploaded-checkbox" ${callout.sms_uploaded ? 'checked' : ''} onchange="updateSmsStatus(this.checked)">
+                <span>Uploaded to SMS</span>
+            </label>
+            ${callout.sms_uploaded_at ? `<p class="sms-status-info"><small>Last updated: ${formatDate(callout.sms_uploaded_at)} by ${escapeHtml(callout.sms_uploaded_by || 'Unknown')}</small></p>` : ''}
+        </div>
+        <hr>
         <div class="callout-edit-header">
             <h3>Attendance</h3>
             <button class="btn btn-small btn-primary" onclick="showAddMemberModal()">+ Add Member</button>
@@ -469,6 +477,36 @@ async function refreshCalloutData() {
     const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}`);
     const data = await response.json();
     currentCallout = data.callout;
+}
+
+async function updateSmsStatus(uploaded) {
+    if (!currentCalloutId) return;
+
+    try {
+        const response = await fetch(`${BASE}/${SLUG}/admin/api/callouts/${currentCalloutId}/sms-status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sms_uploaded: uploaded,
+                updated_by: 'Admin'
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            document.getElementById('sms-uploaded-checkbox').checked = !uploaded;
+            return;
+        }
+
+        // Refresh to show updated timestamp
+        await refreshCalloutData();
+        renderCalloutDetails();
+    } catch (error) {
+        alert('Failed to update SMS status');
+        document.getElementById('sms-uploaded-checkbox').checked = !uploaded;
+    }
 }
 
 async function unlockCallout() {

@@ -170,6 +170,13 @@ class Database
             $this->pdo->exec("ALTER TABLE callouts ADD COLUMN call_time TIME");
         }
 
+        // Add SMS upload tracking columns to callouts (default existing to uploaded=true)
+        if (!in_array('sms_uploaded', $calloutColumnNames)) {
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN sms_uploaded INTEGER DEFAULT 1");
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN sms_uploaded_at DATETIME");
+            $this->pdo->exec("ALTER TABLE callouts ADD COLUMN sms_uploaded_by TEXT");
+        }
+
         // Add status and source columns to attendance if not exists
         $attendanceColumns = $this->query("PRAGMA table_info(attendance)");
         $attendanceColumnNames = array_column($attendanceColumns, 'name');

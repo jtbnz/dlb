@@ -207,4 +207,13 @@ class Callout
             'fenz_fetched_at' => date('Y-m-d H:i:s'),
         ]);
     }
+
+    public static function updateSmsStatus(int $id, bool $uploaded, string $updatedBy): int
+    {
+        return self::update($id, [
+            'sms_uploaded' => $uploaded ? 1 : 0,
+            'sms_uploaded_at' => date('Y-m-d H:i:s'),
+            'sms_uploaded_by' => $updatedBy,
+        ]);
+    }
 }

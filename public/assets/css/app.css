@@ -1084,6 +1084,30 @@ input:focus, select:focus, textarea:focus {
     margin: 0;
 }
 
+/* SMS Upload Section */
+.sms-upload-section {
+    padding: 0.75rem 0;
+}
+
+.sms-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.sms-checkbox-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+}
+
+.sms-status-info {
+    margin-top: 0.25rem;
+    color: var(--gray-600);
+}
+
 /* Attendance Row */
 .attendance-row {
     display: flex;
