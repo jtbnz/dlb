@@ -66,6 +66,12 @@
 
     // Initialize
     async function init() {
+        // Set logbook link URL immediately (always visible in header)
+        const logbookLink = document.getElementById('logbook-link');
+        if (logbookLink) {
+            logbookLink.href = `${BASE}/${SLUG}/logbook`;
+        }
+
         showLoading();
         await loadData();
         setupEventListeners();
