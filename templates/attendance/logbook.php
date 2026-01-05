@@ -2,6 +2,7 @@
 ob_start();
 ?>
 <div class="logbook-container">
+    <a href="<?= base_path() ?>/<?= $slug ?>" class="back-link">← Back to Attendance</a>
     <div class="logbook-header">
         <div class="logbook-title">
             <h1><?= sanitize($brigade['name']) ?> - Logbook</h1>
@@ -116,6 +117,18 @@ $extraHead = <<<HTML
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem;
+}
+
+.logbook-container .back-link {
+    color: var(--gray-600);
+    text-decoration: none;
+    font-size: 0.875rem;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.logbook-container .back-link:hover {
+    color: var(--primary);
 }
 
 .logbook-header {
