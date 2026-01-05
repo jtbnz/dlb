@@ -7,7 +7,7 @@ $content = <<<HTML
         <div class="header-left">
             <div class="header-title-row">
                 <h1>{$brigade['name']}</h1>
-                <a href="#" id="logbook-link" class="btn btn-small btn-book-view">Book View</a>
+                <a href="LOGBOOK_URL_PLACEHOLDER" id="logbook-link" class="btn btn-small btn-book-view">Book View</a>
             </div>
             <div class="icad-display">
                 <span id="icad-label">ICAD:</span>
@@ -154,6 +154,10 @@ $content = <<<HTML
     </div>
 </div>
 HTML;
+
+// Replace URL placeholders with actual URLs
+$content = str_replace('LOGBOOK_URL_PLACEHOLDER', base_path() . '/' . $slug . '/logbook', $content);
+$content = str_replace('HISTORY_URL_PLACEHOLDER', base_path() . '/' . $slug . '/history', $content);
 
 $extraScripts = '<script src="' . base_path() . '/assets/js/attendance.js"></script>';
 

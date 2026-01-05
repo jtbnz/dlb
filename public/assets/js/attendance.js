@@ -66,12 +66,6 @@
 
     // Initialize
     async function init() {
-        // Set logbook link URL immediately (always visible in header)
-        const logbookLink = document.getElementById('logbook-link');
-        if (logbookLink) {
-            logbookLink.href = `${BASE}/${SLUG}/logbook`;
-        }
-
         showLoading();
         await loadData();
         setupEventListeners();
@@ -673,20 +667,10 @@
             countElement.textContent = info;
         }
 
-        // Show recent calls and history panel, set correct URL
+        // Show recent calls and history panel
         const historyPanel = document.getElementById('history-panel');
-        const historyLink = document.getElementById('history-link');
         if (historyPanel) {
             historyPanel.style.display = 'block';
-        }
-        if (historyLink) {
-            historyLink.href = `${BASE}/${SLUG}/history`;
-        }
-
-        // Set logbook link URL
-        const logbookLink = document.getElementById('logbook-link');
-        if (logbookLink) {
-            logbookLink.href = `${BASE}/${SLUG}/logbook`;
         }
 
         // Load recent calls
