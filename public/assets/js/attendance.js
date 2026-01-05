@@ -726,7 +726,10 @@
         container.innerHTML = callouts.map(c => {
             const { dateStr, timeStr } = formatNZDate(c.created_at);
 
-            const location = c.location || 'Location pending...';
+            // Check if this is a muster (ICAD doesn't start with 'F')
+            const isMuster = !c.icad_number || !c.icad_number.startsWith('F');
+            // Only show location for actual callouts (not musters), and only if location exists
+            const location = isMuster ? null : (c.location || 'Location pending...');
             const callType = c.call_type || '';
             const duration = c.duration || '';
 
@@ -742,7 +745,7 @@
                         ${duration ? `<span class="duration">${escapeHtml(duration)}</span>` : ''}
                     </div>
                     ${callType ? `<div class="call-type">${escapeHtml(callType)}</div>` : ''}
-                    <div class="location">${escapeHtml(location)}</div>
+                    ${location ? `<div class="location">${escapeHtml(location)}</div>` : ''}
                 </div>
             `;
         }).join('');

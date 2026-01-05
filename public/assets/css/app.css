@@ -303,12 +303,11 @@ input:focus, select:focus, textarea:focus {
 /* Attendance Page */
 .attendance-page {
     background: var(--gray-50);
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
 }
 
 .attendance-container {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     max-width: 1200px;
