@@ -65,6 +65,8 @@ $routes = [
     // Attendance entry (PIN required) - must come before catch-all brigade route
     ['GET', '/([a-z0-9-]+)/attendance', 'AttendanceController@index'],
     ['GET', '/([a-z0-9-]+)/history', 'AttendanceController@history'],
+    ['GET', '/([a-z0-9-]+)/logbook', 'AttendanceController@logbook'],
+    ['GET', '/([a-z0-9-]+)/logbook/pdf', 'AttendanceController@logbookPdf'],
 
     // Brigade PIN entry and auth
     ['GET', '/([a-z0-9-]+)', 'AuthController@showPin'],

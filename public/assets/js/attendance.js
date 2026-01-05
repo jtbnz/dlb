@@ -677,6 +677,12 @@
             historyLink.href = `${BASE}/${SLUG}/history`;
         }
 
+        // Set logbook link URL
+        const logbookLink = document.getElementById('logbook-link');
+        if (logbookLink) {
+            logbookLink.href = `${BASE}/${SLUG}/logbook`;
+        }
+
         // Load recent calls
         loadRecentCalls();
     }

@@ -336,6 +336,24 @@ input:focus, select:focus, textarea:focus {
     margin: 0;
 }
 
+.header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-book-view {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-book-view:hover {
+    background: var(--gray-200);
+}
+
 .icad-display {
     display: flex;
     align-items: center;

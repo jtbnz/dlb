@@ -5,7 +5,10 @@ $content = <<<HTML
 <div class="attendance-container">
     <header class="attendance-header">
         <div class="header-left">
-            <h1>{$brigade['name']}</h1>
+            <div class="header-title-row">
+                <h1>{$brigade['name']}</h1>
+                <a href="#" id="logbook-link" class="btn btn-small btn-book-view">Book View</a>
+            </div>
             <div class="icad-display">
                 <span id="icad-label">ICAD:</span>
                 <span id="icad-number">-</span>

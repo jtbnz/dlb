@@ -224,4 +224,106 @@ class Callout
             'sms_uploaded_by' => $updatedBy,
         ]);
     }
+
+    /**
+     * Get callouts with full attendance data for logbook view
+     */
+    public static function getLogbookData(int $brigadeId, string $fromDate, string $toDate): array
+    {
+        // Get submitted callouts in date range, ordered by date
+        $callouts = db()->query(
+            "SELECT * FROM callouts
+             WHERE brigade_id = ?
+               AND status = 'submitted'
+               AND DATE(created_at) >= ?
+               AND DATE(created_at) <= ?
+             ORDER BY created_at ASC",
+            [$brigadeId, $fromDate, $toDate]
+        );
+
+        // Enrich each callout with attendance data grouped by truck
+        foreach ($callouts as &$callout) {
+            // Get attendance with member and position details, excluding standby positions
+            $attendance = db()->query(
+                "SELECT a.*,
+                        m.name as member_name,
+                        m.rank as member_rank,
+                        t.name as truck_name,
+                        t.is_station,
+                        p.name as position_name,
+                        p.sort_order as position_order,
+                        p.allow_multiple
+                 FROM attendance a
+                 JOIN members m ON a.member_id = m.id
+                 JOIN trucks t ON a.truck_id = t.id
+                 JOIN positions p ON a.position_id = p.id
+                 WHERE a.callout_id = ?
+                   AND p.allow_multiple = 0
+                 ORDER BY t.sort_order, p.sort_order",
+                [$callout['id']]
+            );
+
+            // Group attendance by truck
+            $trucks = [];
+            foreach ($attendance as $a) {
+                $truckId = $a['truck_id'];
+                if (!isset($trucks[$truckId])) {
+                    $trucks[$truckId] = [
+                        'id' => $truckId,
+                        'name' => $a['truck_name'],
+                        'is_station' => $a['is_station'],
+                        'personnel' => [],
+                    ];
+                }
+
+                // Format member name as "RANK SURNAME INITIAL"
+                $nameParts = explode(' ', $a['member_name']);
+                $surname = array_pop($nameParts);
+                $initial = !empty($nameParts) ? strtoupper(substr($nameParts[0], 0, 1)) : '';
+                $formattedName = strtoupper($a['member_rank']) . ' ' . strtoupper($surname) . ' ' . $initial;
+
+                // Map position to display role (OIC, DR, 1, 2, 3, 4)
+                $role = self::mapPositionToRole($a['position_name'], $a['position_order']);
+
+                $trucks[$truckId]['personnel'][] = [
+                    'role' => $role,
+                    'name' => trim($formattedName),
+                    'position_order' => $a['position_order'],
+                ];
+            }
+
+            // Sort personnel within each truck by position order
+            foreach ($trucks as &$truck) {
+                usort($truck['personnel'], function($a, $b) {
+                    return $a['position_order'] - $b['position_order'];
+                });
+            }
+
+            $callout['trucks'] = array_values($trucks);
+        }
+
+        return $callouts;
+    }
+
+    /**
+     * Map position name/order to display role
+     */
+    private static function mapPositionToRole(string $positionName, int $order): string
+    {
+        $nameLower = strtolower($positionName);
+
+        if (strpos($nameLower, 'oic') !== false || strpos($nameLower, 'officer') !== false) {
+            return 'OIC';
+        }
+        if (strpos($nameLower, 'driver') !== false || strpos($nameLower, 'dr') !== false) {
+            return 'DR';
+        }
+
+        // For numbered positions, use the sort order
+        if ($order <= 2) {
+            return $order == 1 ? 'OIC' : 'DR';
+        }
+
+        return (string)($order - 2);
+    }
 }

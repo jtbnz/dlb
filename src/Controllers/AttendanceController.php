@@ -571,4 +571,100 @@ class AttendanceController
             'callout' => $callout,
         ]);
     }
+
+    public function logbook(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        // Get date range from query params, default to current month
+        $range = $_GET['range'] ?? 'month';
+        $fromDate = $_GET['from'] ?? null;
+        $toDate = $_GET['to'] ?? null;
+
+        // Calculate date range
+        $now = new \DateTime();
+        switch ($range) {
+            case '3months':
+                $from = (clone $now)->modify('-3 months')->format('Y-m-d');
+                $to = $now->format('Y-m-d');
+                break;
+            case '6months':
+                $from = (clone $now)->modify('-6 months')->format('Y-m-d');
+                $to = $now->format('Y-m-d');
+                break;
+            case 'year':
+                $from = $now->format('Y') . '-01-01';
+                $to = $now->format('Y-m-d');
+                break;
+            case 'custom':
+                $from = $fromDate ?? $now->format('Y-m-01');
+                $to = $toDate ?? $now->format('Y-m-d');
+                break;
+            case 'month':
+            default:
+                $from = $now->format('Y-m-01');
+                $to = $now->format('Y-m-d');
+                break;
+        }
+
+        // Get submitted callouts in date range
+        $callouts = Callout::getLogbookData($brigade['id'], $from, $to);
+
+        echo view('attendance/logbook', [
+            'brigade' => $brigade,
+            'slug' => $slug,
+            'callouts' => $callouts,
+            'range' => $range,
+            'fromDate' => $from,
+            'toDate' => $to,
+        ]);
+    }
+
+    public function logbookPdf(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        // Get date range from query params
+        $range = $_GET['range'] ?? 'month';
+        $fromDate = $_GET['from'] ?? null;
+        $toDate = $_GET['to'] ?? null;
+
+        // Calculate date range (same logic as logbook)
+        $now = new \DateTime();
+        switch ($range) {
+            case '3months':
+                $from = (clone $now)->modify('-3 months')->format('Y-m-d');
+                $to = $now->format('Y-m-d');
+                break;
+            case '6months':
+                $from = (clone $now)->modify('-6 months')->format('Y-m-d');
+                $to = $now->format('Y-m-d');
+                break;
+            case 'year':
+                $from = $now->format('Y') . '-01-01';
+                $to = $now->format('Y-m-d');
+                break;
+            case 'custom':
+                $from = $fromDate ?? $now->format('Y-m-01');
+                $to = $toDate ?? $now->format('Y-m-d');
+                break;
+            case 'month':
+            default:
+                $from = $now->format('Y-m-01');
+                $to = $now->format('Y-m-d');
+                break;
+        }
+
+        // Get submitted callouts in date range
+        $callouts = Callout::getLogbookData($brigade['id'], $from, $to);
+
+        // Generate print-friendly HTML
+        echo view('attendance/logbook-print', [
+            'brigade' => $brigade,
+            'slug' => $slug,
+            'callouts' => $callouts,
+            'fromDate' => $from,
+            'toDate' => $to,
+        ]);
+    }
 }
