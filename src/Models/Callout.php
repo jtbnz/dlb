@@ -227,16 +227,19 @@ class Callout
 
     /**
      * Get callouts with full attendance data for logbook view
+     * Excludes musters (only includes callouts with ICAD starting with 'F')
      */
     public static function getLogbookData(int $brigadeId, string $fromDate, string $toDate): array
     {
         // Get submitted callouts in date range, ordered by date
+        // Only include actual callouts (ICAD starting with F), exclude musters
         $callouts = db()->query(
             "SELECT * FROM callouts
              WHERE brigade_id = ?
                AND status = 'submitted'
                AND DATE(created_at) >= ?
                AND DATE(created_at) <= ?
+               AND icad_number LIKE 'F%'
              ORDER BY created_at ASC",
             [$brigadeId, $fromDate, $toDate]
         );
