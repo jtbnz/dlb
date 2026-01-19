@@ -92,6 +92,7 @@ $routes = [
     ['GET', '/([a-z0-9-]+)/api/members', 'AttendanceController@getMembers'],
     ['GET', '/([a-z0-9-]+)/api/trucks', 'AttendanceController@getTrucks'],
     ['POST', '/([a-z0-9-]+)/api/attendance', 'AttendanceController@addAttendance'],
+    ['POST', '/([a-z0-9-]+)/api/attendance/leave', 'AttendanceController@markLeave'],
     ['DELETE', '/([a-z0-9-]+)/api/attendance/([0-9]+)', 'AttendanceController@removeAttendance'],
     ['GET', '/([a-z0-9-]+)/api/sse/callout/([0-9]+)', 'SSEController@stream'],
     ['GET', '/([a-z0-9-]+)/api/history', 'AttendanceController@apiGetHistory'],

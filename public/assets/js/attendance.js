@@ -10,12 +10,14 @@
         availableMembersPerCallout: {},  // Map: calloutId -> members[]
         leaveMembersPerCallout: {},      // Map: calloutId -> leave members[]
         absentMembersPerCallout: {},     // Map: calloutId -> absent members[]
+        portalLeavePerCallout: {},       // Map: calloutId -> Portal leave records[]
         selectedMember: null,
         eventSources: {},                // Map: calloutId -> EventSource
         isProcessing: false,
         calloutsThisYear: 0,
         lastCallout: null,
-        requireSubmitterName: true       // Whether to require submitter name on submit
+        requireSubmitterName: true,      // Whether to require submitter name on submit
+        portalEnabled: false             // Whether Portal integration is enabled
     };
 
     // Helper functions for multi-callout support
@@ -33,6 +35,28 @@
 
     function getActiveAbsentMembers() {
         return state.absentMembersPerCallout[state.activeCalloutId] || [];
+    }
+
+    function getActivePortalLeave() {
+        return state.portalLeavePerCallout[state.activeCalloutId] || [];
+    }
+
+    // Check if a member has Portal leave for the active callout
+    function hasPortalLeave(memberId) {
+        const portalLeave = getActivePortalLeave();
+        return portalLeave.some(leave =>
+            leave.member_id === memberId ||
+            leave.dlb_member_id === memberId
+        );
+    }
+
+    // Get Portal leave info for a member
+    function getPortalLeaveInfo(memberId) {
+        const portalLeave = getActivePortalLeave();
+        return portalLeave.find(leave =>
+            leave.member_id === memberId ||
+            leave.dlb_member_id === memberId
+        );
     }
 
     function switchToCallout(calloutId) {
@@ -83,19 +107,22 @@
             state.calloutsThisYear = data.callouts_this_year || 0;
             state.lastCallout = data.last_callout || null;
             state.requireSubmitterName = data.require_submitter_name !== false;
+            state.portalEnabled = data.portal_enabled || false;
 
             // Handle array of callouts
             const callouts = data.callouts || [];
             state.callouts = callouts;
 
-            // Build available/leave/absent members map for each callout
+            // Build available/leave/absent/portal leave members map for each callout
             state.availableMembersPerCallout = {};
             state.leaveMembersPerCallout = {};
             state.absentMembersPerCallout = {};
+            state.portalLeavePerCallout = {};
             callouts.forEach(callout => {
                 state.availableMembersPerCallout[callout.id] = callout.available_members || [];
                 state.leaveMembersPerCallout[callout.id] = callout.leave_members || [];
                 state.absentMembersPerCallout[callout.id] = callout.absent_members || [];
+                state.portalLeavePerCallout[callout.id] = callout.portal_leave || [];
             });
 
             if (callouts.length > 0) {
@@ -951,24 +978,45 @@
             elements.memberCount.textContent = availableMembers.length;
         }
 
-        elements.availableMembers.innerHTML = availableMembers.map(member => `
-            <div class="member-chip ${state.selectedMember === member.id ? 'selected' : ''}"
-                 data-member-id="${member.id}"
-                 onclick="selectMember(${member.id})">
-                <span class="name">${escapeHtml(member.display_name || member.name)}</span>
-            </div>
-        `).join('') || '<p class="no-data">All members assigned</p>';
+        elements.availableMembers.innerHTML = availableMembers.map(member => {
+            const portalLeave = getPortalLeaveInfo(member.id);
+            const hasLeave = !!portalLeave;
+            const leaveClass = hasLeave ? ' has-portal-leave' : '';
+            const leaveTitle = hasLeave ? ` title="Portal leave: ${escapeHtml(portalLeave.reason || 'Approved')}"` : '';
+            const leaveBadge = hasLeave ? '<span class="portal-leave-badge">L</span>' : '';
+
+            return `
+                <div class="member-chip ${state.selectedMember === member.id ? 'selected' : ''}${leaveClass}"
+                     data-member-id="${member.id}"${leaveTitle}
+                     onclick="selectMember(${member.id})">
+                    ${leaveBadge}
+                    <span class="name">${escapeHtml(member.display_name || member.name)}</span>
+                </div>
+            `;
+        }).join('') || '<p class="no-data">All members assigned</p>';
     }
 
     function renderLeaveMembers() {
         const leaveMembers = getActiveLeaveMembers();
+        const portalLeave = getActivePortalLeave();
         const leaveSection = document.getElementById('leave-section');
         const leaveContainer = document.getElementById('leave-members');
         const leaveCount = document.getElementById('leave-count');
 
         if (!leaveSection || !leaveContainer) return;
 
-        if (leaveMembers.length === 0) {
+        // Get member IDs already marked as leave in DLB
+        const dlbLeaveIds = new Set(leaveMembers.map(m => m.member_id));
+
+        // Filter Portal leave to only show those not already in DLB leave list
+        const portalOnlyLeave = portalLeave.filter(p => {
+            const memberId = p.dlb_member_id || p.member_id;
+            return !dlbLeaveIds.has(memberId);
+        });
+
+        const totalLeave = leaveMembers.length + portalOnlyLeave.length;
+
+        if (totalLeave === 0) {
             leaveSection.style.display = 'none';
             return;
         }
@@ -976,18 +1024,42 @@
         leaveSection.style.display = 'block';
 
         if (leaveCount) {
-            leaveCount.textContent = leaveMembers.length;
+            leaveCount.textContent = totalLeave;
         }
 
-        leaveContainer.innerHTML = leaveMembers.map(member => `
+        // Render DLB leave members
+        const dlbLeaveHtml = leaveMembers.map(member => `
             <div class="leave-chip">
                 <span class="name">${escapeHtml(member.member_name || member.display_name)}</span>
                 ${member.notes ? `<span class="notes">${escapeHtml(member.notes)}</span>` : ''}
             </div>
         `).join('');
+
+        // Render Portal-only leave members
+        const portalLeaveHtml = portalOnlyLeave.map(leave => `
+            <div class="leave-chip portal-leave">
+                <span class="portal-badge">Portal</span>
+                <span class="name">${escapeHtml(leave.member_name || 'Unknown')}</span>
+                ${leave.reason ? `<span class="notes">${escapeHtml(leave.reason)}</span>` : ''}
+            </div>
+        `).join('');
+
+        leaveContainer.innerHTML = dlbLeaveHtml + portalLeaveHtml;
     }
 
     window.selectMember = function(memberId) {
+        // If member has Portal leave, offer to mark as leave instead of select
+        if (hasPortalLeave(memberId)) {
+            const portalLeave = getPortalLeaveInfo(memberId);
+            const member = state.members.find(m => m.id === memberId);
+            const memberName = member ? (member.display_name || member.name) : 'This member';
+
+            if (confirm(`${memberName} has approved leave in Portal.\n\nMark as Leave for this muster?`)) {
+                markMemberAsLeave(memberId, portalLeave.reason || 'Portal approved leave');
+                return;
+            }
+        }
+
         if (state.selectedMember === memberId) {
             state.selectedMember = null;
         } else {
@@ -999,6 +1071,89 @@
             chip.classList.toggle('selected', chipId === state.selectedMember);
         });
     };
+
+    // Quick leave functionality
+    window.markMemberAsLeave = async function(memberId, reason = '') {
+        if (state.isProcessing) return;
+        state.isProcessing = true;
+
+        const callout = getActiveCallout();
+        if (!callout) {
+            state.isProcessing = false;
+            return;
+        }
+
+        const member = state.members.find(m => m.id === memberId);
+        const memberName = member ? (member.display_name || member.name) : 'Member';
+
+        try {
+            const response = await fetch(`${BASE}/${SLUG}/api/attendance/leave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callout_id: callout.id,
+                    member_id: memberId,
+                    reason: reason,
+                    sync_to_portal: state.portalEnabled
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update state
+                state.availableMembersPerCallout[callout.id] = data.available_members || [];
+                state.leaveMembersPerCallout[callout.id] = data.leave_members || [];
+                state.selectedMember = null;
+
+                renderAvailableMembers();
+                renderLeaveMembers();
+
+                // Show success feedback
+                showToast(`${memberName} marked as leave`);
+            } else {
+                showError(data.error || 'Failed to mark leave');
+            }
+        } catch (error) {
+            console.error('Failed to mark leave:', error);
+            showError('Failed to mark leave. Please try again.');
+        } finally {
+            state.isProcessing = false;
+        }
+    };
+
+    // Show quick leave modal for selected member
+    window.showQuickLeaveModal = function() {
+        if (!state.selectedMember) {
+            showError('Please select a member first');
+            return;
+        }
+
+        const member = state.members.find(m => m.id === state.selectedMember);
+        const memberName = member ? (member.display_name || member.name) : 'Selected member';
+
+        const reason = prompt(`Mark ${memberName} as Leave.\n\nReason (optional):`);
+        if (reason !== null) {  // User didn't cancel
+            markMemberAsLeave(state.selectedMember, reason);
+        }
+    };
+
+    function showToast(message) {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    }
 
     window.selectPosition = async function(truckId, positionId) {
         if (!state.selectedMember) {

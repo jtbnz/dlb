@@ -43,4 +43,11 @@ return [
         'from_address' => 'attendance@example.com',
         'from_name' => 'Brigade Attendance',
     ],
+    'portal' => [
+        'enabled' => false,                          // Enable Portal integration
+        'api_url' => 'https://example.com/portal',   // Portal base URL (no trailing slash)
+        'api_token' => '',                           // API token from Portal
+        'timeout' => 10,                             // Request timeout in seconds
+        'cache_ttl' => 300,                          // Cache leave data for 5 minutes
+    ],
 ];

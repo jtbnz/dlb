@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Models\Truck;
 use App\Middleware\PinAuth;
 use App\Services\EmailService;
+use App\Services\PortalApiClient;
 
 class AttendanceController
 {
@@ -30,12 +31,34 @@ class AttendanceController
         // Get ALL active callouts (supports multiple simultaneous callouts)
         $callouts = Callout::findAllActive($brigade['id']);
 
+        // Get Portal leave data if enabled
+        $portalLeave = [];
+        $portalEnabled = PortalApiClient::isEnabled();
+        if ($portalEnabled) {
+            $portalClient = new PortalApiClient();
+            // Fetch leave for today by default, individual callouts may have specific dates
+            $portalLeave = $portalClient->getLeaveForDate(date('Y-m-d'));
+        }
+
         // Enrich each callout with attendance data
         foreach ($callouts as &$callout) {
             $callout['attendance'] = Attendance::findByCalloutGrouped($callout['id']);
             $callout['leave_members'] = Attendance::findLeaveByCallout($callout['id']);
             $callout['absent_members'] = Attendance::findAbsentByCallout($callout['id']);
             $callout['available_members'] = Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder);
+
+            // Add Portal leave for this callout's date (if it's a muster with a specific date)
+            if ($portalEnabled) {
+                $calloutDate = $callout['call_date'] ?? date('Y-m-d', strtotime($callout['created_at']));
+                if ($calloutDate !== date('Y-m-d')) {
+                    // Fetch leave for specific date if different from today
+                    $callout['portal_leave'] = $portalClient->getLeaveForDate($calloutDate);
+                } else {
+                    $callout['portal_leave'] = $portalLeave;
+                }
+            } else {
+                $callout['portal_leave'] = [];
+            }
         }
 
         $lastCallout = Callout::findLastSubmitted($brigade['id']);
@@ -50,6 +73,7 @@ class AttendanceController
                 'created_at' => $lastCallout['created_at'],
             ] : null,
             'require_submitter_name' => (bool)($brigade['require_submitter_name'] ?? 1),
+            'portal_enabled' => $portalEnabled,
         ]);
     }
 
@@ -502,6 +526,91 @@ class AttendanceController
             'attendance' => Attendance::findByCalloutGrouped($callout['id']),
             'available_members' => Attendance::getAvailableMembers($callout['id'], $brigade['id'], $memberOrder),
         ]);
+    }
+
+    /**
+     * Mark a member as on leave for a callout
+     * Also optionally creates leave in Portal if enabled
+     */
+    public function markLeave(string $slug): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        $calloutId = (int)($data['callout_id'] ?? 0);
+        $memberId = (int)($data['member_id'] ?? 0);
+        $reason = trim($data['reason'] ?? '');
+        $syncToPortal = (bool)($data['sync_to_portal'] ?? false);
+
+        // Validate callout
+        $callout = Callout::findById($calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid callout'], 400);
+            return;
+        }
+
+        if ($callout['status'] !== 'active') {
+            json_response(['error' => 'Cannot modify a submitted callout'], 400);
+            return;
+        }
+
+        // Validate member
+        $member = Member::findById($memberId);
+        if (!$member || $member['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid member'], 400);
+            return;
+        }
+
+        // Create leave attendance record in DLB
+        $notes = $reason ?: 'Marked as leave';
+        if ($syncToPortal && PortalApiClient::isEnabled()) {
+            $notes = 'Portal: ' . $notes;
+        }
+
+        try {
+            $attendanceId = Attendance::createWithStatus([
+                'callout_id' => $calloutId,
+                'member_id' => $memberId,
+                'status' => 'L',
+                'source' => $syncToPortal ? 'portal' : 'manual',
+                'notes' => $notes,
+            ]);
+
+            audit_log($brigade['id'], $calloutId, 'leave_marked', [
+                'member_id' => $memberId,
+                'member_name' => $member['display_name'] ?? $member['name'],
+                'reason' => $reason,
+                'sync_to_portal' => $syncToPortal,
+            ]);
+
+            // Sync to Portal if requested and enabled
+            $portalResult = null;
+            if ($syncToPortal && PortalApiClient::isEnabled()) {
+                $portalClient = new PortalApiClient();
+                $calloutDate = $callout['call_date'] ?? date('Y-m-d', strtotime($callout['created_at']));
+                $portalResult = $portalClient->createLeave($memberId, $calloutDate, $reason);
+            }
+
+            // Notify SSE clients
+            $this->notifySSE($calloutId);
+
+            json_response([
+                'success' => true,
+                'attendance_id' => $attendanceId,
+                'portal_synced' => $portalResult !== null,
+                'attendance' => Attendance::findByCalloutGrouped($calloutId),
+                'leave_members' => Attendance::findLeaveByCallout($calloutId),
+                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder),
+            ]);
+        } catch (\Exception $e) {
+            json_response([
+                'error' => 'Failed to mark leave. Please try again.',
+                'attendance' => Attendance::findByCalloutGrouped($calloutId),
+                'available_members' => Attendance::getAvailableMembers($calloutId, $brigade['id'], $memberOrder),
+            ], 500);
+        }
     }
 
     private function notifySSE(int $calloutId): void

@@ -62,6 +62,9 @@ class EmailService
         $submittedAt = $callout['submitted_at'] ?? $callout['created_at'] ?? date('Y-m-d H:i:s');
         $submittedBy = $callout['submitted_by'] ?? 'Unknown';
 
+        // Get leave members
+        $leaveMembers = Attendance::findLeaveByCallout($callout['id']);
+
         $lines = [];
         $lines[] = "ICAD: {$callout['icad_number']}";
         $lines[] = "Date: " . date('d/m/Y H:i', strtotime($submittedAt));
@@ -91,12 +94,32 @@ class EmailService
             }
         }
 
-        if (!empty($brigade['include_non_attendees']) && !empty($notAttending)) {
+        // Add leave members section
+        if (!empty($leaveMembers)) {
             $lines[] = "";
-            $lines[] = "NOT IN ATTENDANCE";
+            $lines[] = "ON LEAVE";
             $lines[] = str_repeat("-", 40);
-            foreach ($notAttending as $member) {
-                $lines[] = "  - {$member['name']} ({$member['rank']})";
+            foreach ($leaveMembers as $member) {
+                $name = $member['member_name'] ?? 'Unknown';
+                $rank = $member['member_rank'] ?? '';
+                $notes = !empty($member['notes']) ? " - {$member['notes']}" : '';
+                $source = ($member['source'] ?? 'manual') === 'portal' ? ' (Portal)' : '';
+                $lines[] = "  - {$name}" . ($rank ? " ({$rank})" : '') . $notes . $source;
+            }
+        }
+
+        if (!empty($brigade['include_non_attendees']) && !empty($notAttending)) {
+            // Filter out leave members from not attending list
+            $leaveMemberIds = array_column($leaveMembers, 'member_id');
+            $notAttending = array_filter($notAttending, fn($m) => !in_array($m['id'], $leaveMemberIds));
+
+            if (!empty($notAttending)) {
+                $lines[] = "";
+                $lines[] = "NOT IN ATTENDANCE";
+                $lines[] = str_repeat("-", 40);
+                foreach ($notAttending as $member) {
+                    $lines[] = "  - {$member['name']} ({$member['rank']})";
+                }
             }
         }
 

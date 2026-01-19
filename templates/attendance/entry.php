@@ -72,6 +72,9 @@ $content = <<<HTML
                 <div id="available-members" class="available-members">
                     <!-- Available members will be rendered here -->
                 </div>
+                <div class="member-actions">
+                    <button type="button" class="btn btn-small btn-mark-leave" onclick="showQuickLeaveModal()">Mark Leave</button>
+                </div>
                 <div id="leave-section" class="leave-section" style="display:none;">
                     <div class="panel-header leave-header">
                         <h3>On Leave</h3>
