@@ -14,6 +14,12 @@ class SSEController
         $brigade = PinAuth::requireAuth($slug);
         $memberOrder = Brigade::getMemberOrder($brigade);
 
+        // Validate callout ID is numeric to prevent directory traversal
+        if (!is_numeric($calloutId) || (int)$calloutId <= 0) {
+            http_response_code(400);
+            return;
+        }
+
         $callout = Callout::findById((int)$calloutId);
         if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
             http_response_code(404);
@@ -35,7 +41,6 @@ class SSEController
             ob_end_clean();
         }
 
-        $sseFile = __DIR__ . '/../../data/sse_' . $calloutId . '.json';
         $lastTimestamp = 0;
 
         // Send initial connection event
@@ -51,24 +56,26 @@ class SSEController
                 break;
             }
 
-            // Check for updates
-            if (file_exists($sseFile)) {
-                $data = json_decode(file_get_contents($sseFile), true);
-                if ($data && $data['timestamp'] > $lastTimestamp) {
-                    $lastTimestamp = $data['timestamp'];
+            // Check for updates in database (more reliable than file I/O)
+            $notification = db()->queryOne(
+                "SELECT timestamp FROM sse_notifications WHERE callout_id = ?",
+                [(int)$calloutId]
+            );
 
-                    // Send updated attendance data
-                    $attendance = Attendance::findByCalloutGrouped((int)$calloutId);
-                    $availableMembers = Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder);
+            if ($notification && $notification['timestamp'] > $lastTimestamp) {
+                $lastTimestamp = $notification['timestamp'];
 
-                    echo "event: update\n";
-                    echo "data: " . json_encode([
-                        'attendance' => $attendance,
-                        'available_members' => $availableMembers,
-                        'timestamp' => $lastTimestamp,
-                    ]) . "\n\n";
-                    flush();
-                }
+                // Send updated attendance data
+                $attendance = Attendance::findByCalloutGrouped((int)$calloutId);
+                $availableMembers = Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder);
+
+                echo "event: update\n";
+                echo "data: " . json_encode([
+                    'attendance' => $attendance,
+                    'available_members' => $availableMembers,
+                    'timestamp' => $lastTimestamp,
+                ]) . "\n\n";
+                flush();
             }
 
             // Check if callout was submitted - use a simple status query to avoid overhead
@@ -88,7 +95,8 @@ class SSEController
             echo ": keepalive\n\n";
             flush();
 
-            sleep(1);
+            // Optimize polling: sleep 2 seconds instead of 1 to reduce server load by ~50%
+            sleep(2);
         }
 
         // Tell client to reconnect (only for timeout, not submission)

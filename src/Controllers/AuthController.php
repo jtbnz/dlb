@@ -51,6 +51,8 @@ class AuthController
 
         if (Brigade::verifyPin($brigade, $pin)) {
             $this->clearRateLimit($slug);
+            // Regenerate session ID to prevent session fixation
+            session_regenerate_id(true);
             PinAuth::setAuthenticated($slug);
             audit_log($brigade['id'], null, 'pin_login', ['success' => true]);
             json_response(['success' => true, 'redirect' => base_path() . "/{$slug}/attendance"]);
