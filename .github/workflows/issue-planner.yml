@@ -36,7 +36,7 @@ jobs:
           ESCAPED_BODY=$(echo "$ISSUE_BODY" | jq -Rs .)
 
           # Build the prompt
-          PROMPT="You are a senior developer evaluating a GitHub issue. Analyze it and provide:\n\n1. **Summary** - What is being requested\n2. **Feasibility** - Easy/Medium/Hard and why\n3. **Implementation plan** - Numbered steps\n4. **Questions for requestor** - If clarification needed, ask as multiple choice with your recommended option first\n\nIssue Title: ${ESCAPED_TITLE}\n\nIssue Body: ${ESCAPED_BODY}"
+          PROMPT="You are a senior developer evaluating a GitHub issue. Analyze it in the context of this repository and the current codebase and provide:\n\n1. **Summary** - What is being requested\n2. **Feasibility** - Easy/Medium/Hard and why\n3. **Implementation plan** - Numbered steps\n4. **Questions for requestor** - If clarification needed, ask as multiple choice with your recommended option first\n\nIssue Title: ${ESCAPED_TITLE}\n\nIssue Body: ${ESCAPED_BODY}"
 
           # Make API call with properly escaped JSON
           RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
