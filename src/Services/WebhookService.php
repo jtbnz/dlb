@@ -84,7 +84,7 @@ class WebhookService
     {
         // Get callout
         $stmt = $this->db->prepare("
-            SELECT id, icad_number, call_type, DATE(created_at) as call_date, visible, status
+            SELECT id, brigade_id, icad_number, call_type, DATE(created_at) as call_date, visible, status
             FROM callouts
             WHERE id = ?
         ");
@@ -160,23 +160,11 @@ class WebhookService
     }
 
     /**
-     * Log successful webhook
+     * Log successful webhook (to error_log for debugging)
      */
     private function logWebhookSuccess(string $url, string $event, int $calloutId): void
     {
-        $stmt = $this->db->prepare("
-            INSERT INTO audit_log (action, details, ip_address, created_at)
-            VALUES ('webhook.sent', ?, ?, datetime('now', 'localtime'))
-        ");
-        $stmt->execute([
-            json_encode([
-                'url' => $url,
-                'event' => $event,
-                'callout_id' => $calloutId,
-                'status' => 'success',
-            ]),
-            $_SERVER['REMOTE_ADDR'] ?? 'system',
-        ]);
+        error_log("Webhook sent to {$url}: event={$event}, callout_id={$calloutId}");
     }
 
     /**
@@ -184,19 +172,6 @@ class WebhookService
      */
     private function logWebhookError(string $url, string $event, string $error): void
     {
-        error_log("Webhook error to {$url}: {$error}");
-
-        $stmt = $this->db->prepare("
-            INSERT INTO audit_log (action, details, ip_address, created_at)
-            VALUES ('webhook.failed', ?, ?, datetime('now', 'localtime'))
-        ");
-        $stmt->execute([
-            json_encode([
-                'url' => $url,
-                'event' => $event,
-                'error' => $error,
-            ]),
-            $_SERVER['REMOTE_ADDR'] ?? 'system',
-        ]);
+        error_log("Webhook error to {$url}: event={$event}, error={$error}");
     }
 }
