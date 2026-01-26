@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Models\Truck;
 use App\Middleware\PinAuth;
 use App\Services\EmailService;
+use App\Services\WebhookService;
 
 class AttendanceController
 {
@@ -137,6 +138,9 @@ class AttendanceController
             $this->autoPopulateMusterAttendance($brigade['id'], $calloutId);
         }
 
+        // Push to Portal webhook
+        $this->pushToPortal($calloutId, 'callout.created');
+
         $callout = Callout::findById($calloutId);
         $callout['attendance'] = Attendance::findByCalloutGrouped($calloutId);
         $callout['leave_members'] = Attendance::findLeaveByCallout($calloutId);
@@ -216,6 +220,9 @@ class AttendanceController
         if (isset($data['icad_number'])) {
             Callout::update((int)$calloutId, ['icad_number' => trim($data['icad_number'])]);
             audit_log($brigade['id'], (int)$calloutId, 'callout_updated', ['icad_number' => $data['icad_number']]);
+
+            // Push to Portal webhook
+            $this->pushToPortal((int)$calloutId, 'callout.updated');
         }
 
         json_response(['success' => true]);
@@ -243,6 +250,9 @@ class AttendanceController
         Callout::submit((int)$calloutId, $submittedBy);
 
         audit_log($brigade['id'], (int)$calloutId, 'callout_submitted', []);
+
+        // Push to Portal webhook
+        $this->pushToPortal((int)$calloutId, 'callout.submitted');
 
         // Reload callout to get updated submitted_at timestamp
         $callout = Callout::findById((int)$calloutId);
@@ -448,6 +458,9 @@ class AttendanceController
             // Notify SSE clients
             $this->notifySSE($calloutId);
 
+            // Push to Portal webhook
+            $this->pushToPortal($calloutId, 'attendance.saved');
+
             json_response([
                 'success' => true,
                 'attendance_id' => $attendanceId,
@@ -559,6 +572,9 @@ class AttendanceController
 
             // Notify SSE clients
             $this->notifySSE($calloutId);
+
+            // Push to Portal webhook
+            $this->pushToPortal($calloutId, 'attendance.saved');
 
             json_response([
                 'success' => true,
@@ -738,5 +754,29 @@ class AttendanceController
             'fromDate' => $from,
             'toDate' => $to,
         ]);
+    }
+
+    /**
+     * Push callout data to Portal webhook
+     *
+     * @param int $calloutId Callout ID to push
+     * @param string $event Event type (callout.created, callout.updated, etc.)
+     */
+    private function pushToPortal(int $calloutId, string $event): void
+    {
+        try {
+            global $config;
+            $webhookService = new WebhookService(db()->getPdo(), $config);
+
+            if ($webhookService->isPortalWebhookEnabled()) {
+                $result = $webhookService->pushCalloutToPortal($calloutId, $event);
+                if (!$result['success']) {
+                    error_log("Portal webhook failed for callout {$calloutId}: " . ($result['error'] ?? 'Unknown error'));
+                }
+            }
+        } catch (\Exception $e) {
+            // Don't break the main flow if webhook fails
+            error_log("Portal webhook exception for callout {$calloutId}: " . $e->getMessage());
+        }
     }
 }

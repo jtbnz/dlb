@@ -43,4 +43,12 @@ return [
         'from_address' => 'attendance@example.com',
         'from_name' => 'Brigade Attendance',
     ],
+    'webhooks' => [
+        'portal' => [
+            'enabled' => false,
+            'url' => 'https://example.com/pp/api/webhook/attendance',
+            'secret' => '', // Shared secret - must match Portal's dlb.webhook_secret
+            'timeout' => 10, // seconds
+        ],
+    ],
 ];

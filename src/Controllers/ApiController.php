@@ -10,6 +10,7 @@ use App\Models\Attendance;
 use App\Models\Member;
 use App\Models\Truck;
 use App\Middleware\ApiAuth;
+use App\Services\WebhookService;
 
 /**
  * API v1 Controller
@@ -71,6 +72,9 @@ class ApiController
             'token_name' => $token['name'],
             'icad_number' => $icadNumber,
         ]);
+
+        // Push to Portal webhook
+        $this->pushToPortal($id, 'callout.created');
 
         $this->jsonResponse([
             'success' => true,
@@ -169,6 +173,9 @@ class ApiController
             'visible' => $data['visible'],
         ]);
 
+        // Push to Portal webhook
+        $this->pushToPortal((int)$id, 'callout.updated');
+
         $this->jsonResponse([
             'success' => true,
             'muster' => [
@@ -243,6 +250,9 @@ class ApiController
             'member_id' => $data['member_id'],
             'status' => $data['status'],
         ]);
+
+        // Push to Portal webhook
+        $this->pushToPortal((int)$musterId, 'attendance.saved');
 
         $this->jsonResponse([
             'success' => true,
@@ -349,6 +359,9 @@ class ApiController
             'created' => $created,
             'failed' => $failed,
         ]);
+
+        // Push to Portal webhook (once for the entire batch)
+        $this->pushToPortal((int)$musterId, 'attendance.saved');
 
         $this->jsonResponse([
             'success' => true,
@@ -545,5 +558,29 @@ class ApiController
             ],
         ]);
         exit;
+    }
+
+    /**
+     * Push callout data to Portal webhook
+     *
+     * @param int $calloutId Callout ID to push
+     * @param string $event Event type (callout.created, callout.updated, etc.)
+     */
+    private function pushToPortal(int $calloutId, string $event): void
+    {
+        try {
+            global $config;
+            $webhookService = new WebhookService(db()->getPdo(), $config);
+
+            if ($webhookService->isPortalWebhookEnabled()) {
+                $result = $webhookService->pushCalloutToPortal($calloutId, $event);
+                if (!$result['success']) {
+                    error_log("Portal webhook failed for callout {$calloutId}: " . ($result['error'] ?? 'Unknown error'));
+                }
+            }
+        } catch (\Exception $e) {
+            // Don't break the main flow if webhook fails
+            error_log("Portal webhook exception for callout {$calloutId}: " . $e->getMessage());
+        }
     }
 }
