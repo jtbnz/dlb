@@ -84,7 +84,7 @@ class WebhookService
     {
         // Get callout
         $stmt = $this->db->prepare("
-            SELECT id, icad_number, call_type, call_date, visible, status
+            SELECT id, icad_number, call_type, DATE(created_at) as call_date, visible, status
             FROM callouts
             WHERE id = ?
         ");
