@@ -765,8 +765,7 @@ class AttendanceController
     private function pushToPortal(int $calloutId, string $event): void
     {
         try {
-            global $config;
-            $webhookService = new WebhookService(db()->getPdo(), $config);
+            $webhookService = new WebhookService(db()->getPdo(), config());
 
             if ($webhookService->isPortalWebhookEnabled()) {
                 $result = $webhookService->pushCalloutToPortal($calloutId, $event);
