@@ -46,7 +46,16 @@ class SuperAdminAuth
             return false;
         }
 
-        return $username === $configUsername && $password === $configPassword;
+        // Support both plaintext (for backward compatibility) and hashed passwords
+        // If password starts with $2y$ it's already hashed with bcrypt
+        $isHashed = str_starts_with($configPassword, '$2y$');
+        
+        if ($isHashed) {
+            return $username === $configUsername && password_verify($password, $configPassword);
+        } else {
+            // Legacy plaintext password support
+            return $username === $configUsername && $password === $configPassword;
+        }
     }
 
     public static function setAuthenticated(): void

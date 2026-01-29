@@ -51,6 +51,8 @@ class AdminController
 
         if ($username === $brigade['admin_username'] && Brigade::verifyAdminPassword($brigade, $password)) {
             $this->clearRateLimit('admin_' . $slug);
+            // Regenerate session ID to prevent session fixation
+            session_regenerate_id(true);
             AdminAuth::setAuthenticated($slug);
             audit_log($brigade['id'], null, 'admin_login', ['username' => $username]);
             json_response(['success' => true, 'redirect' => base_path() . "/{$slug}/admin/dashboard"]);

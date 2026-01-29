@@ -71,6 +71,25 @@ class AttendanceController
             return;
         }
 
+        // Sanitize inputs to prevent XSS
+        $icadNumber = htmlspecialchars($icadNumber, ENT_QUOTES, 'UTF-8');
+        $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
+        $callType = htmlspecialchars($callType, ENT_QUOTES, 'UTF-8');
+
+        // Limit input lengths
+        if (strlen($icadNumber) > 50) {
+            json_response(['error' => 'ICAD number too long'], 400);
+            return;
+        }
+        if (strlen($location) > 200) {
+            json_response(['error' => 'Location too long'], 400);
+            return;
+        }
+        if (strlen($callType) > 100) {
+            json_response(['error' => 'Call type too long'], 400);
+            return;
+        }
+
         // Validate ICAD format: must start with F (case-insensitive) or be "muster"
         $isMuster = strtolower($icadNumber) === 'muster';
         $startsWithF = strtoupper(substr($icadNumber, 0, 1)) === 'F';
@@ -594,12 +613,12 @@ class AttendanceController
 
     private function notifySSE(int $calloutId): void
     {
-        // Write to a file that SSE clients poll
-        $sseFile = __DIR__ . '/../../data/sse_' . $calloutId . '.json';
-        file_put_contents($sseFile, json_encode([
-            'timestamp' => microtime(true),
-            'callout_id' => $calloutId,
-        ]));
+        // Use database table instead of file for SSE notifications
+        // This is more reliable and scalable
+        db()->execute(
+            "INSERT OR REPLACE INTO sse_notifications (callout_id, timestamp) VALUES (?, ?)",
+            [$calloutId, time()]
+        );
     }
 
     public function history(string $slug): void

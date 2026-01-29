@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Cache;
+
 class Member
 {
     // Rank order from highest to lowest
@@ -26,16 +28,20 @@ class Member
 
     public static function findByBrigade(int $brigadeId, bool $activeOnly = true): array
     {
-        $sql = "SELECT * FROM members WHERE brigade_id = ?";
-        if ($activeOnly) {
-            $sql .= " AND is_active = 1";
-        }
-        $sql .= " ORDER BY last_name, first_name";
+        $cacheKey = "members_brigade_{$brigadeId}_active_" . ($activeOnly ? '1' : '0');
+        
+        return Cache::remember($cacheKey, function() use ($brigadeId, $activeOnly) {
+            $sql = "SELECT * FROM members WHERE brigade_id = ?";
+            if ($activeOnly) {
+                $sql .= " AND is_active = 1";
+            }
+            $sql .= " ORDER BY last_name, first_name";
 
-        $members = db()->query($sql, [$brigadeId]);
+            $members = db()->query($sql, [$brigadeId]);
 
-        // Sort by rank (highest first), then by last_name
-        return self::sortMembers($members, 'rank_surname');
+            // Sort by rank (highest first), then by last_name
+            return self::sortMembers($members, 'rank_surname');
+        });
     }
 
     /**
@@ -163,23 +169,46 @@ class Member
 
     public static function create(array $data): int
     {
-        return db()->insert('members', $data);
+        $result = db()->insert('members', $data);
+        // Invalidate cache for this brigade
+        if (isset($data['brigade_id'])) {
+            self::invalidateCache($data['brigade_id']);
+        }
+        return $result;
     }
 
-    public static function update(int $id, array $data): int
+    public static function update(int $id, array $data, ?int $brigadeId = null): int
     {
+        // If brigade_id not provided, fetch it
+        if ($brigadeId === null) {
+            $member = self::findById($id);
+            $brigadeId = $member['brigade_id'] ?? null;
+        }
+        
         $data['updated_at'] = date('Y-m-d H:i:s');
-        return db()->update('members', $data, 'id = ?', [$id]);
+        $result = db()->update('members', $data, 'id = ?', [$id]);
+        
+        // Invalidate cache for this brigade
+        if ($brigadeId !== null) {
+            self::invalidateCache($brigadeId);
+        }
+        return $result;
     }
 
-    public static function deactivate(int $id): int
+    public static function deactivate(int $id, ?int $brigadeId = null): int
     {
-        return self::update($id, ['is_active' => 0]);
+        return self::update($id, ['is_active' => 0], $brigadeId);
     }
 
-    public static function activate(int $id): int
+    public static function activate(int $id, ?int $brigadeId = null): int
     {
-        return self::update($id, ['is_active' => 1]);
+        return self::update($id, ['is_active' => 1], $brigadeId);
+    }
+
+    private static function invalidateCache(int $brigadeId): void
+    {
+        Cache::forget("members_brigade_{$brigadeId}_active_1");
+        Cache::forget("members_brigade_{$brigadeId}_active_0");
     }
 
     /**
