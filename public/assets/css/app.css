@@ -635,12 +635,17 @@ input:focus, select:focus, textarea:focus {
 /* Standby Section */
 .standby-section {
     padding: 0.5rem;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
 .standby-members {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
+    flex: 1;
+    align-content: flex-start;
 }
 
 .standby-member {
@@ -1282,6 +1287,12 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--primary);
     background: rgba(220, 38, 38, 0.1);
     transform: scale(1.05);
+}
+
+.standby-section.drop-target {
+    background: rgba(220, 38, 38, 0.05);
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
 }
 
 .position-slot.drop-invalid {
