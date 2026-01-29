@@ -1374,6 +1374,21 @@
             return { type: 'standby', element: standbyAdd };
         }
 
+        // Check if dropping anywhere in the standby section (including white space)
+        const standbySection = element.closest('.standby-section');
+        if (standbySection) {
+            // Find the standby-add button within this section to get the truck and position IDs
+            const standbyAddInSection = standbySection.querySelector('.standby-add');
+            if (standbyAddInSection) {
+                // Return the section as the highlight target, but keep reference to the button for IDs
+                return { 
+                    type: 'standby', 
+                    element: standbyAddInSection,
+                    highlightElement: standbySection
+                };
+            }
+        }
+
         // Check if dropping on the available members panel (to unassign)
         const availablePanel = element.closest('.available-members') || element.closest('.members-panel');
         if (availablePanel && dragState.dragSource !== 'available') {
@@ -1471,7 +1486,9 @@
                 target.element.dataset.attendanceId === String(dragState.sourceAttendanceId)) {
                 return;
             }
-            target.element.classList.add('drop-target');
+            // Use highlightElement if provided, otherwise use element
+            const elementToHighlight = target.highlightElement || target.element;
+            elementToHighlight.classList.add('drop-target');
         }
     }
 
