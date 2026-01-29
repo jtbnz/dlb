@@ -1368,19 +1368,13 @@
             return { type: 'position', element: filledPositionSlot, filled: true };
         }
 
-        // Check if it's a standby add button
-        const standbyAdd = element.closest('.standby-add');
-        if (standbyAdd) {
-            return { type: 'standby', element: standbyAdd };
-        }
-
-        // Check if dropping anywhere in the standby section (including white space)
+        // Check if dropping anywhere in the standby section (including white space and button)
         const standbySection = element.closest('.standby-section');
         if (standbySection) {
             // Find the standby-add button within this section to get the truck and position IDs
             const standbyAddInSection = standbySection.querySelector('.standby-add');
             if (standbyAddInSection) {
-                // Return the section as the highlight target, but keep reference to the button for IDs
+                // Return the section as the highlight target for consistent visual feedback
                 return { 
                     type: 'standby', 
                     element: standbyAddInSection,
