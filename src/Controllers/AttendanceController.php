@@ -305,6 +305,57 @@ class AttendanceController
         ]);
     }
 
+    /**
+     * Copy attendance from the last submitted muster to the current callout.
+     */
+    public function copyLastMuster(string $slug, string $calloutId): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+        $memberOrder = Brigade::getMemberOrder($brigade);
+
+        $callout = Callout::findById((int)$calloutId);
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Invalid callout'], 400);
+            return;
+        }
+
+        if ($callout['status'] !== 'active') {
+            json_response(['error' => 'Cannot modify a submitted callout'], 400);
+            return;
+        }
+
+        // Get the last submitted muster
+        $lastCallout = Callout::findLastSubmittedMuster($brigade['id']);
+        if (!$lastCallout) {
+            json_response(['error' => 'No previous muster to copy from'], 400);
+            return;
+        }
+
+        $copied = $this->copyAttendanceFrom($lastCallout, (int)$calloutId, $brigade['id']);
+
+        audit_log($brigade['id'], (int)$calloutId, 'attendance_copied', [
+            'from_callout' => $lastCallout['id'],
+            'from_icad' => $lastCallout['icad_number'],
+            'records_copied' => $copied,
+            'type' => 'muster',
+        ]);
+
+        // Notify SSE clients
+        $this->notifySSE((int)$calloutId);
+
+        json_response([
+            'success' => true,
+            'copied' => $copied,
+            'from_icad' => $lastCallout['icad_number'],
+            'attendance' => Attendance::findByCalloutGrouped((int)$calloutId),
+            'available_members' => Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder),
+        ]);
+    }
+
+    /**
+     * Copy attendance from the last call (incident) to the current callout.
+     * The source call does not need to be submitted.
+     */
     public function copyLastCall(string $slug, string $calloutId): void
     {
         $brigade = PinAuth::requireAuth($slug);
@@ -321,19 +372,48 @@ class AttendanceController
             return;
         }
 
-        // Get the last submitted muster (not callout)
-        $lastCallout = Callout::findLastSubmittedMuster($brigade['id']);
+        // Get the last call (incident) with attendance, excluding current callout
+        $lastCallout = Callout::findLastCallWithAttendance($brigade['id'], (int)$calloutId);
         if (!$lastCallout) {
-            json_response(['error' => 'No previous muster to copy from'], 400);
+            json_response(['error' => 'No previous call to copy from'], 400);
             return;
         }
 
-        // Get attendance from last callout
-        $lastAttendance = Attendance::findByCallout($lastCallout['id']);
+        $copied = $this->copyAttendanceFrom($lastCallout, (int)$calloutId, $brigade['id']);
 
-        // Copy each attendance record to the new callout
+        audit_log($brigade['id'], (int)$calloutId, 'attendance_copied', [
+            'from_callout' => $lastCallout['id'],
+            'from_icad' => $lastCallout['icad_number'],
+            'records_copied' => $copied,
+            'type' => 'call',
+        ]);
+
+        // Notify SSE clients
+        $this->notifySSE((int)$calloutId);
+
+        json_response([
+            'success' => true,
+            'copied' => $copied,
+            'from_icad' => $lastCallout['icad_number'],
+            'attendance' => Attendance::findByCalloutGrouped((int)$calloutId),
+            'available_members' => Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder),
+        ]);
+    }
+
+    /**
+     * Helper to copy attendance records from one callout to another.
+     */
+    private function copyAttendanceFrom(array $sourceCallout, int $targetCalloutId, int $brigadeId): int
+    {
+        $lastAttendance = Attendance::findByCallout($sourceCallout['id']);
+
         $copied = 0;
         foreach ($lastAttendance as $record) {
+            // Skip leave records
+            if (($record['status'] ?? '') === 'L') {
+                continue;
+            }
+
             // Check if member is still active
             $member = Member::findById($record['member_id']);
             if (!$member || !$member['is_active']) {
@@ -349,7 +429,7 @@ class AttendanceController
 
             try {
                 Attendance::create([
-                    'callout_id' => (int)$calloutId,
+                    'callout_id' => $targetCalloutId,
                     'member_id' => $record['member_id'],
                     'truck_id' => $record['truck_id'],
                     'position_id' => $record['position_id'],
@@ -360,22 +440,7 @@ class AttendanceController
             }
         }
 
-        audit_log($brigade['id'], (int)$calloutId, 'attendance_copied', [
-            'from_callout' => $lastCallout['id'],
-            'from_icad' => $lastCallout['icad_number'],
-            'records_copied' => $copied,
-        ]);
-
-        // Notify SSE clients
-        $this->notifySSE((int)$calloutId);
-
-        json_response([
-            'success' => true,
-            'copied' => $copied,
-            'from_icad' => $lastCallout['icad_number'],
-            'attendance' => Attendance::findByCalloutGrouped((int)$calloutId),
-            'available_members' => Attendance::getAvailableMembers((int)$calloutId, $brigade['id'], $memberOrder),
-        ]);
+        return $copied;
     }
 
     public function addAttendance(string $slug): void

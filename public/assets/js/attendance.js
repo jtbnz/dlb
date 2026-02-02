@@ -64,7 +64,8 @@
         memberCount: document.getElementById('member-count'),
         icadNumber: document.getElementById('icad-number'),
         changeIcadBtn: document.getElementById('change-icad-btn'),
-        copyLastBtn: document.getElementById('copy-last-btn'),
+        copyLastMusterBtn: document.getElementById('copy-last-muster-btn'),
+        copyLastCallBtn: document.getElementById('copy-last-call-btn'),
         submitBtn: document.getElementById('submit-btn'),
         closeBtn: document.getElementById('close-btn'),
         submittedTime: document.getElementById('submitted-time'),
@@ -132,7 +133,8 @@
     function setupEventListeners() {
         elements.newCalloutForm.addEventListener('submit', handleNewCallout);
         elements.changeIcadBtn.addEventListener('click', showIcadModal);
-        elements.copyLastBtn.addEventListener('click', handleCopyLastCall);
+        elements.copyLastMusterBtn.addEventListener('click', () => handleCopyLast('muster'));
+        elements.copyLastCallBtn.addEventListener('click', () => handleCopyLast('call'));
         elements.closeBtn.addEventListener('click', handleClose);
         document.getElementById('change-icad-form').addEventListener('submit', handleChangeIcad);
         elements.submitBtn.addEventListener('click', showSubmitModal);
@@ -234,19 +236,28 @@
         }
     }
 
-    async function handleCopyLastCall() {
+    async function handleCopyLast(type) {
         const callout = getActiveCallout();
         if (!callout || callout.status !== 'active') return;
 
-        if (!confirm('Copy attendance from the last submitted muster? This will add all members from that muster to this one.')) {
+        const isMuster = type === 'muster';
+        const label = isMuster ? 'muster' : 'call';
+        const btn = isMuster ? elements.copyLastMusterBtn : elements.copyLastCallBtn;
+        const endpoint = isMuster ? 'copy-last-muster' : 'copy-last-call';
+
+        const confirmMsg = isMuster
+            ? 'Copy attendance from the last submitted muster? This will add all members from that muster to this one.'
+            : 'Copy attendance from the last call? This will add all members from that call to this one.';
+
+        if (!confirm(confirmMsg)) {
             return;
         }
 
-        elements.copyLastBtn.disabled = true;
-        elements.copyLastBtn.textContent = 'Copying...';
+        btn.disabled = true;
+        btn.textContent = 'Copying...';
 
         try {
-            const response = await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}/copy-last`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}/${endpoint}`, {
                 method: 'POST'
             });
 
@@ -268,11 +279,11 @@
             render();
             alert(`Copied ${data.copied} attendees from ${data.from_icad}`);
         } catch (error) {
-            console.error('Failed to copy last call:', error);
-            alert('Failed to copy attendance. Please try again.');
+            console.error(`Failed to copy last ${label}:`, error);
+            alert(`Failed to copy attendance. Please try again.`);
         } finally {
-            elements.copyLastBtn.disabled = false;
-            elements.copyLastBtn.textContent = 'Copy Last Muster';
+            btn.disabled = false;
+            btn.textContent = isMuster ? 'Copy Last Muster' : 'Copy Last Call';
         }
     }
 
@@ -499,7 +510,8 @@
 
         // Hide change and copy buttons
         elements.changeIcadBtn.style.display = 'none';
-        elements.copyLastBtn.style.display = 'none';
+        elements.copyLastMusterBtn.style.display = 'none';
+        elements.copyLastCallBtn.style.display = 'none';
 
         // Disable editing
         disableEditing();
@@ -795,7 +807,8 @@
         } else {
             // Show active state controls
             elements.changeIcadBtn.style.display = 'inline-block';
-            elements.copyLastBtn.style.display = 'inline-block';
+            elements.copyLastMusterBtn.style.display = 'inline-block';
+            elements.copyLastCallBtn.style.display = 'inline-block';
             elements.submitBtn.disabled = false;
             elements.submitBtn.textContent = 'Submit';
             elements.submitBtn.classList.add('btn-success');

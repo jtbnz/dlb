@@ -358,7 +358,7 @@ test.describe('Callout Management', () => {
       if (callouts.length > 0 && callouts[0]?.id) {
         const calloutId = callouts[0].id;
 
-        const copyResponse = await page.request.post(`${slug}/api/callout/${calloutId}/copy-last`);
+        const copyResponse = await page.request.post(`${slug}/api/callout/${calloutId}/copy-last-muster`);
         // May succeed or fail if no previous attendance
         expect([200, 400, 404]).toContain(copyResponse.status());
       }

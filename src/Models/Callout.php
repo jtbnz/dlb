@@ -61,6 +61,23 @@ class Callout
         );
     }
 
+    /**
+     * Find the last call (incident, not muster) that has attendance records.
+     * Does not need to be submitted.
+     */
+    public static function findLastCallWithAttendance(int $brigadeId, int $excludeCalloutId = 0): ?array
+    {
+        return db()->queryOne(
+            "SELECT c.* FROM callouts c
+             WHERE c.brigade_id = ?
+             AND c.id != ?
+             AND LOWER(c.icad_number) NOT LIKE 'muster%'
+             AND EXISTS (SELECT 1 FROM attendance a WHERE a.callout_id = c.id AND a.status != 'L')
+             ORDER BY c.created_at DESC LIMIT 1",
+            [$brigadeId, $excludeCalloutId]
+        );
+    }
+
     public static function findByBrigade(int $brigadeId, int $limit = 50, int $offset = 0): array
     {
         return db()->query(
