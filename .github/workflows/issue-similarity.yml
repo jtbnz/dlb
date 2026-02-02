@@ -69,45 +69,50 @@ jobs:
           # Read existing issues
           EXISTING_ISSUES=$(cat existing_issues.json)
 
+          # Escape inputs for JSON using jq
+          ESCAPED_TITLE=$(echo "$ISSUE_TITLE" | jq -Rs .)
+          ESCAPED_BODY=$(echo "$ISSUE_BODY" | jq -Rs .)
+          ESCAPED_ISSUES=$(echo "$EXISTING_ISSUES" | jq -Rs .)
+
           # Build the prompt
           PROMPT="You are analyzing a new GitHub issue to find similar existing issues.
 
-NEW ISSUE:
-Title: $ISSUE_TITLE
+          NEW ISSUE:
+          Title: ${ESCAPED_TITLE}
 
-Body:
-$ISSUE_BODY
+          Body:
+          ${ESCAPED_BODY}
 
-EXISTING ISSUES (JSON array):
-$EXISTING_ISSUES
+          EXISTING ISSUES (JSON array):
+          ${ESCAPED_ISSUES}
 
-TASK:
-1. Analyze the new issue and compare it against all existing issues
-2. Find issues that are similar in topic, problem description, or feature request
-3. Consider semantic similarity, not just keyword matching
+          TASK:
+          1. Analyze the new issue and compare it against all existing issues
+          2. Find issues that are similar in topic, problem description, or feature request
+          3. Consider semantic similarity, not just keyword matching
 
-RESPONSE FORMAT:
-If you find similar issues (similarity threshold: issues that discuss the same feature, bug, or area of the codebase), respond with ONLY valid JSON in this exact format:
-{
-  \"found\": true,
-  \"similar_issues\": [
-    {
-      \"number\": <issue_number>,
-      \"url\": \"<issue_url>\",
-      \"state\": \"open\" or \"closed\",
-      \"summary\": \"<one paragraph summary of what this issue was about>\",
-      \"resolution\": \"<if closed, one paragraph describing the fix/resolution, otherwise null>\"
-    }
-  ]
-}
+          RESPONSE FORMAT:
+          If you find similar issues (similarity threshold: issues that discuss the same feature, bug, or area of the codebase), respond with ONLY valid JSON in this exact format:
+          {
+            \"found\": true,
+            \"similar_issues\": [
+              {
+                \"number\": <issue_number>,
+                \"url\": \"<issue_url>\",
+                \"state\": \"open\" or \"closed\",
+                \"summary\": \"<one paragraph summary of what this issue was about>\",
+                \"resolution\": \"<if closed, one paragraph describing the fix/resolution, otherwise null>\"
+              }
+            ]
+          }
 
-If NO similar issues are found, respond with:
-{
-  \"found\": false
-}
+          If NO similar issues are found, respond with:
+          {
+            \"found\": false
+          }
 
-Only include issues with meaningful similarity (same feature area, similar bug, related functionality). Do not include issues that are only tangentially related.
-Maximum 5 similar issues, ordered by relevance."
+          Only include issues with meaningful similarity (same feature area, similar bug, related functionality). Do not include issues that are only tangentially related.
+          Maximum 5 similar issues, ordered by relevance."
 
           # Make API call
           RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
