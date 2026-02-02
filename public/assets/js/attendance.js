@@ -66,6 +66,7 @@
         changeIcadBtn: document.getElementById('change-icad-btn'),
         copyLastMusterBtn: document.getElementById('copy-last-muster-btn'),
         copyLastCallBtn: document.getElementById('copy-last-call-btn'),
+        cancelCallBtn: document.getElementById('cancel-call-btn'),
         submitBtn: document.getElementById('submit-btn'),
         closeBtn: document.getElementById('close-btn'),
         submittedTime: document.getElementById('submitted-time'),
@@ -135,6 +136,7 @@
         elements.changeIcadBtn.addEventListener('click', showIcadModal);
         elements.copyLastMusterBtn.addEventListener('click', () => handleCopyLast('muster'));
         elements.copyLastCallBtn.addEventListener('click', () => handleCopyLast('call'));
+        elements.cancelCallBtn.addEventListener('click', handleCancelCall);
         elements.closeBtn.addEventListener('click', handleClose);
         document.getElementById('change-icad-form').addEventListener('submit', handleChangeIcad);
         elements.submitBtn.addEventListener('click', showSubmitModal);
@@ -284,6 +286,58 @@
         } finally {
             btn.disabled = false;
             btn.textContent = isMuster ? 'Copy Last Muster' : 'Copy Last Call';
+        }
+    }
+
+    async function handleCancelCall() {
+        const callout = getActiveCallout();
+        if (!callout || callout.status !== 'active') return;
+
+        if (!confirm(`Are you sure you want to cancel this call?\n\nICAD: ${callout.icad_number}\n\nThis will delete the call and all attendance records. This action cannot be undone.`)) {
+            return;
+        }
+
+        elements.cancelCallBtn.disabled = true;
+        elements.cancelCallBtn.textContent = 'Cancelling...';
+
+        try {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            // Close SSE for this callout
+            if (state.eventSources[callout.id]) {
+                state.eventSources[callout.id].close();
+                delete state.eventSources[callout.id];
+            }
+
+            // Remove callout from state
+            state.callouts = state.callouts.filter(c => c.id !== callout.id);
+            delete state.availableMembersPerCallout[callout.id];
+            delete state.leaveMembersPerCallout[callout.id];
+            delete state.absentMembersPerCallout[callout.id];
+
+            // If there are remaining callouts, switch to the first one
+            if (state.callouts.length > 0) {
+                state.activeCalloutId = state.callouts[0].id;
+                showAttendanceArea();
+            } else {
+                state.activeCalloutId = null;
+                showNoCallout();
+            }
+        } catch (error) {
+            console.error('Failed to cancel call:', error);
+            alert('Failed to cancel call. Please try again.');
+        } finally {
+            elements.cancelCallBtn.disabled = false;
+            elements.cancelCallBtn.textContent = 'Cancel Call';
         }
     }
 
@@ -508,10 +562,11 @@
         // Show close button
         elements.closeBtn.style.display = 'inline-block';
 
-        // Hide change and copy buttons
+        // Hide change, copy, and cancel buttons
         elements.changeIcadBtn.style.display = 'none';
         elements.copyLastMusterBtn.style.display = 'none';
         elements.copyLastCallBtn.style.display = 'none';
+        elements.cancelCallBtn.style.display = 'none';
 
         // Disable editing
         disableEditing();
@@ -809,6 +864,7 @@
             elements.changeIcadBtn.style.display = 'inline-block';
             elements.copyLastMusterBtn.style.display = 'inline-block';
             elements.copyLastCallBtn.style.display = 'inline-block';
+            elements.cancelCallBtn.style.display = 'inline-block';
             elements.submitBtn.disabled = false;
             elements.submitBtn.textContent = 'Submit';
             elements.submitBtn.classList.add('btn-success');

@@ -15,6 +15,7 @@ $content = <<<HTML
                 <button id="change-icad-btn" class="btn-small" style="display:none;">Change</button>
                 <button id="copy-last-muster-btn" class="btn-small" style="display:none;">Copy Last Muster</button>
                 <button id="copy-last-call-btn" class="btn-small" style="display:none;">Copy Last Call</button>
+                <button id="cancel-call-btn" class="btn-small btn-danger" style="display:none;">Cancel Call</button>
             </div>
         </div>
         <div class="header-right">

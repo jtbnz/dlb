@@ -228,6 +228,36 @@ class AttendanceController
         json_response(['success' => true]);
     }
 
+    public function cancelCallout(string $slug, string $calloutId): void
+    {
+        $brigade = PinAuth::requireAuth($slug);
+
+        $callout = Callout::findById((int)$calloutId);
+
+        if (!$callout || $callout['brigade_id'] !== $brigade['id']) {
+            json_response(['error' => 'Callout not found'], 404);
+            return;
+        }
+
+        if ($callout['status'] !== 'active') {
+            json_response(['error' => 'Cannot cancel a submitted callout'], 400);
+            return;
+        }
+
+        // Delete all attendance records first
+        Attendance::deleteByCallout((int)$calloutId);
+
+        // Delete the callout
+        Callout::delete((int)$calloutId);
+
+        audit_log($brigade['id'], (int)$calloutId, 'callout_cancelled', ['icad_number' => $callout['icad_number']]);
+
+        // Push cancellation to Portal webhook
+        $this->pushToPortal((int)$calloutId, 'callout.cancelled');
+
+        json_response(['success' => true]);
+    }
+
     public function submitCallout(string $slug, string $calloutId): void
     {
         $brigade = PinAuth::requireAuth($slug);

@@ -87,6 +87,7 @@ $routes = [
     ['GET', '/([a-z0-9-]+)/api/callout/last-attendance', 'AttendanceController@getLastCallAttendance'],
     ['POST', '/([a-z0-9-]+)/api/callout', 'AttendanceController@createCallout'],
     ['PUT', '/([a-z0-9-]+)/api/callout/([0-9]+)', 'AttendanceController@updateCallout'],
+    ['DELETE', '/([a-z0-9-]+)/api/callout/([0-9]+)', 'AttendanceController@cancelCallout'],
     ['POST', '/([a-z0-9-]+)/api/callout/([0-9]+)/submit', 'AttendanceController@submitCallout'],
     ['POST', '/([a-z0-9-]+)/api/callout/([0-9]+)/copy-last-muster', 'AttendanceController@copyLastMuster'],
     ['POST', '/([a-z0-9-]+)/api/callout/([0-9]+)/copy-last-call', 'AttendanceController@copyLastCall'],
