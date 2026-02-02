@@ -568,6 +568,14 @@ input:focus, select:focus, textarea:focus {
     overflow: hidden;
     border: 1px solid var(--gray-200);
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Station truck card (with standby) should fill remaining space */
+.truck-card:has(.standby-section) {
+    flex: 1;
+    min-height: 200px;
 }
 
 .truck-header-bar {
@@ -638,6 +646,7 @@ input:focus, select:focus, textarea:focus {
     min-height: 200px;
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .standby-members {
