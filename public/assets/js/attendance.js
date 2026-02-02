@@ -1368,10 +1368,19 @@
             return { type: 'position', element: filledPositionSlot, filled: true };
         }
 
-        // Check if it's a standby add button
-        const standbyAdd = element.closest('.standby-add');
-        if (standbyAdd) {
-            return { type: 'standby', element: standbyAdd };
+        // Check if dropping anywhere in the standby section (including white space and button)
+        const standbySection = element.closest('.standby-section');
+        if (standbySection) {
+            // Find the standby-add button within this section to get the truck and position IDs
+            const standbyAddInSection = standbySection.querySelector('.standby-add');
+            if (standbyAddInSection) {
+                // Return the section as the highlight target for consistent visual feedback
+                return { 
+                    type: 'standby', 
+                    element: standbyAddInSection,
+                    highlightElement: standbySection
+                };
+            }
         }
 
         // Check if dropping on the available members panel (to unassign)
@@ -1471,7 +1480,9 @@
                 target.element.dataset.attendanceId === String(dragState.sourceAttendanceId)) {
                 return;
             }
-            target.element.classList.add('drop-target');
+            // Use highlightElement if provided, otherwise use element
+            const elementToHighlight = target.highlightElement || target.element;
+            elementToHighlight.classList.add('drop-target');
         }
     }
 
