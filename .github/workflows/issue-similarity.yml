@@ -1,0 +1,176 @@
+# .github/workflows/issue-similarity.yml
+name: Similar Issue Finder
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  find-similar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch existing issues
+        id: fetch-issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Fetch both open and closed issues (last 100)
+            const [openIssues, closedIssues] = await Promise.all([
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 50
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'closed',
+                per_page: 50
+              })
+            ]);
+
+            // Combine and filter out the current issue and PRs
+            const currentIssueNumber = context.issue.number;
+            const allIssues = [...openIssues.data, ...closedIssues.data]
+              .filter(issue =>
+                issue.number !== currentIssueNumber &&
+                !issue.pull_request
+              )
+              .map(issue => ({
+                number: issue.number,
+                title: issue.title,
+                body: issue.body || '',
+                state: issue.state,
+                url: issue.html_url,
+                closed_at: issue.closed_at,
+                labels: issue.labels.map(l => l.name)
+              }));
+
+            // Save to file for Claude to analyze
+            const fs = require('fs');
+            fs.writeFileSync('existing_issues.json', JSON.stringify(allIssues, null, 2));
+
+            console.log(`Found ${allIssues.length} existing issues to compare against`);
+            core.setOutput('issue_count', allIssues.length);
+
+      - name: Find similar issues with Claude
+        if: steps.fetch-issues.outputs.issue_count > 0
+        id: find-similar
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Read existing issues
+          EXISTING_ISSUES=$(cat existing_issues.json)
+
+          # Build the prompt
+          PROMPT="You are analyzing a new GitHub issue to find similar existing issues.
+
+NEW ISSUE:
+Title: $ISSUE_TITLE
+
+Body:
+$ISSUE_BODY
+
+EXISTING ISSUES (JSON array):
+$EXISTING_ISSUES
+
+TASK:
+1. Analyze the new issue and compare it against all existing issues
+2. Find issues that are similar in topic, problem description, or feature request
+3. Consider semantic similarity, not just keyword matching
+
+RESPONSE FORMAT:
+If you find similar issues (similarity threshold: issues that discuss the same feature, bug, or area of the codebase), respond with ONLY valid JSON in this exact format:
+{
+  \"found\": true,
+  \"similar_issues\": [
+    {
+      \"number\": <issue_number>,
+      \"url\": \"<issue_url>\",
+      \"state\": \"open\" or \"closed\",
+      \"summary\": \"<one paragraph summary of what this issue was about>\",
+      \"resolution\": \"<if closed, one paragraph describing the fix/resolution, otherwise null>\"
+    }
+  ]
+}
+
+If NO similar issues are found, respond with:
+{
+  \"found\": false
+}
+
+Only include issues with meaningful similarity (same feature area, similar bug, related functionality). Do not include issues that are only tangentially related.
+Maximum 5 similar issues, ordered by relevance."
+
+          # Make API call
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "$(jq -n \
+              --arg prompt "$PROMPT" \
+              '{
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 2000,
+                messages: [{
+                  role: "user",
+                  content: $prompt
+                }]
+              }')")
+
+          # Extract the response text and save it
+          echo "$RESPONSE" | jq -r '.content[0].text' > similar_issues.json
+
+          # Check if similar issues were found
+          FOUND=$(cat similar_issues.json | jq -r '.found // false')
+          echo "found=$FOUND" >> $GITHUB_OUTPUT
+
+      - name: Post comment if similar issues found
+        if: steps.find-similar.outputs.found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const result = JSON.parse(fs.readFileSync('similar_issues.json', 'utf8'));
+
+            if (!result.found || !result.similar_issues || result.similar_issues.length === 0) {
+              console.log('No similar issues to report');
+              return;
+            }
+
+            // Build the comment
+            let comment = '## 🔍 Similar Issues Found\n\n';
+            comment += 'The following existing issues may be related to this one:\n\n';
+
+            for (const issue of result.similar_issues) {
+              const stateEmoji = issue.state === 'closed' ? '✅' : '🔵';
+              const stateLabel = issue.state === 'closed' ? 'Closed' : 'Open';
+
+              comment += `### ${stateEmoji} #${issue.number} (${stateLabel})\n`;
+              comment += `**Link:** ${issue.url}\n\n`;
+              comment += `**Summary:** ${issue.summary}\n\n`;
+
+              if (issue.state === 'closed' && issue.resolution) {
+                comment += `**Resolution:** ${issue.resolution}\n\n`;
+              }
+
+              comment += '---\n\n';
+            }
+
+            comment += '*This analysis was generated automatically to help identify related issues.*';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+            console.log(`Posted comment with ${result.similar_issues.length} similar issues`);
