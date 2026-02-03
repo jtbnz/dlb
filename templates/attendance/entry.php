@@ -12,7 +12,7 @@ $content = <<<HTML
             <div class="icad-display">
                 <span id="icad-label">ICAD:</span>
                 <span id="icad-number">-</span>
-                <button id="change-icad-btn" class="btn-small" style="display:none;">Change</button>
+                <button id="edit-call-btn" class="btn-small" style="display:none;">Edit</button>
                 <button id="copy-last-muster-btn" class="btn-small" style="display:none;">Copy Last Muster</button>
                 <button id="copy-last-call-btn" class="btn-small" style="display:none;">Copy Last Call</button>
                 <button id="cancel-call-btn" class="btn-small btn-danger" style="display:none;">Cancel Call</button>
@@ -104,14 +104,29 @@ $content = <<<HTML
     </div>
 </div>
 
-<!-- ICAD Change Modal -->
-<div id="icad-modal" class="modal" style="display:none;">
+<!-- Edit Call Details Modal -->
+<div id="edit-call-modal" class="modal" style="display:none;">
     <div class="modal-content">
-        <h2>Change ICAD Number</h2>
-        <form id="change-icad-form">
-            <input type="text" id="modal-icad" placeholder="Enter new ICAD Number" required>
+        <h2>Edit Call Details</h2>
+        <form id="edit-call-form">
+            <div class="form-group">
+                <label for="edit-icad">ICAD Number</label>
+                <input type="text" id="edit-icad" placeholder="ICAD Number (e.g., F4363832)" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-datetime">Date/Time</label>
+                <input type="datetime-local" id="edit-datetime" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-location">Location</label>
+                <input type="text" id="edit-location" placeholder="Address / Location">
+            </div>
+            <div class="form-group">
+                <label for="edit-call-type">Call Type</label>
+                <input type="text" id="edit-call-type" placeholder="Call Type (e.g., Structure Fire)">
+            </div>
             <div class="modal-buttons">
-                <button type="button" class="btn" onclick="closeIcadModal()">Cancel</button>
+                <button type="button" class="btn" onclick="closeEditCallModal()">Cancel</button>
                 <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>

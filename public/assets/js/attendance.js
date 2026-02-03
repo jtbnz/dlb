@@ -63,7 +63,7 @@
         availableMembers: document.getElementById('available-members'),
         memberCount: document.getElementById('member-count'),
         icadNumber: document.getElementById('icad-number'),
-        changeIcadBtn: document.getElementById('change-icad-btn'),
+        editCallBtn: document.getElementById('edit-call-btn'),
         copyLastMusterBtn: document.getElementById('copy-last-muster-btn'),
         copyLastCallBtn: document.getElementById('copy-last-call-btn'),
         cancelCallBtn: document.getElementById('cancel-call-btn'),
@@ -72,7 +72,7 @@
         submittedTime: document.getElementById('submitted-time'),
         syncStatus: document.getElementById('sync-status'),
         newCalloutForm: document.getElementById('new-callout-form'),
-        icadModal: document.getElementById('icad-modal'),
+        editCallModal: document.getElementById('edit-call-modal'),
         submitModal: document.getElementById('submit-modal'),
         calloutTabs: document.getElementById('callout-tabs'),
         tabsList: document.getElementById('tabs-list')
@@ -133,12 +133,12 @@
     // Setup event listeners
     function setupEventListeners() {
         elements.newCalloutForm.addEventListener('submit', handleNewCallout);
-        elements.changeIcadBtn.addEventListener('click', showIcadModal);
+        elements.editCallBtn.addEventListener('click', showEditCallModal);
         elements.copyLastMusterBtn.addEventListener('click', () => handleCopyLast('muster'));
         elements.copyLastCallBtn.addEventListener('click', () => handleCopyLast('call'));
         elements.cancelCallBtn.addEventListener('click', handleCancelCall);
         elements.closeBtn.addEventListener('click', handleClose);
-        document.getElementById('change-icad-form').addEventListener('submit', handleChangeIcad);
+        document.getElementById('edit-call-form').addEventListener('submit', handleEditCall);
         elements.submitBtn.addEventListener('click', showSubmitModal);
     }
 
@@ -202,39 +202,64 @@
         }
     }
 
-    function showIcadModal() {
+    function showEditCallModal() {
         const callout = getActiveCallout();
         if (!callout) return;
-        document.getElementById('modal-icad').value = callout.icad_number;
-        elements.icadModal.style.display = 'flex';
+
+        document.getElementById('edit-icad').value = callout.icad_number || '';
+        document.getElementById('edit-datetime').value = callout.call_datetime ? callout.call_datetime.slice(0, 16) : '';
+        document.getElementById('edit-location').value = callout.location || '';
+        document.getElementById('edit-call-type').value = callout.call_type || '';
+
+        elements.editCallModal.style.display = 'flex';
     }
 
-    window.closeIcadModal = function() {
-        elements.icadModal.style.display = 'none';
+    window.closeEditCallModal = function() {
+        elements.editCallModal.style.display = 'none';
     };
 
-    async function handleChangeIcad(e) {
+    async function handleEditCall(e) {
         e.preventDefault();
         const callout = getActiveCallout();
         if (!callout) return;
 
-        const newIcad = document.getElementById('modal-icad').value.trim();
+        const newIcad = document.getElementById('edit-icad').value.trim();
+        const newDatetime = document.getElementById('edit-datetime').value;
+        const newLocation = document.getElementById('edit-location').value.trim();
+        const newCallType = document.getElementById('edit-call-type').value.trim();
+
         if (!newIcad) return;
 
         try {
-            await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}`, {
+            const response = await fetch(`${BASE}/${SLUG}/api/callout/${callout.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ icad_number: newIcad })
+                body: JSON.stringify({
+                    icad_number: newIcad,
+                    call_datetime: newDatetime,
+                    location: newLocation,
+                    call_type: newCallType
+                })
             });
 
-            callout.icad_number = newIcad;
+            const data = await response.json();
+            if (data.success && data.callout) {
+                // Update local state with returned callout data
+                Object.assign(callout, data.callout);
+            } else {
+                // Fallback to local update
+                callout.icad_number = newIcad;
+                callout.call_datetime = newDatetime;
+                callout.location = newLocation;
+                callout.call_type = newCallType;
+            }
+
             elements.icadNumber.textContent = newIcad;
             renderTabs();
-            closeIcadModal();
+            closeEditCallModal();
         } catch (error) {
-            console.error('Failed to update ICAD:', error);
-            alert('Failed to update ICAD number.');
+            console.error('Failed to update call details:', error);
+            alert('Failed to update call details.');
         }
     }
 
@@ -563,7 +588,7 @@
         elements.closeBtn.style.display = 'inline-block';
 
         // Hide change, copy, and cancel buttons
-        elements.changeIcadBtn.style.display = 'none';
+        elements.editCallBtn.style.display = 'none';
         elements.copyLastMusterBtn.style.display = 'none';
         elements.copyLastCallBtn.style.display = 'none';
         elements.cancelCallBtn.style.display = 'none';
@@ -861,7 +886,7 @@
             showSubmittedState();
         } else {
             // Show active state controls
-            elements.changeIcadBtn.style.display = 'inline-block';
+            elements.editCallBtn.style.display = 'inline-block';
             elements.copyLastMusterBtn.style.display = 'inline-block';
             elements.copyLastCallBtn.style.display = 'inline-block';
             elements.cancelCallBtn.style.display = 'inline-block';

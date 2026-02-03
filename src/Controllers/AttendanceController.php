@@ -217,15 +217,43 @@ class AttendanceController
 
         $data = json_decode(file_get_contents('php://input'), true);
 
+        $updateData = [];
+        $auditData = [];
+
         if (isset($data['icad_number'])) {
-            Callout::update((int)$calloutId, ['icad_number' => trim($data['icad_number'])]);
-            audit_log($brigade['id'], (int)$calloutId, 'callout_updated', ['icad_number' => $data['icad_number']]);
+            $updateData['icad_number'] = trim($data['icad_number']);
+            $auditData['icad_number'] = $data['icad_number'];
+        }
+
+        if (isset($data['call_datetime'])) {
+            $updateData['call_datetime'] = $data['call_datetime'];
+            $auditData['call_datetime'] = $data['call_datetime'];
+        }
+
+        if (array_key_exists('location', $data)) {
+            $updateData['location'] = trim($data['location'] ?? '');
+            $auditData['location'] = $data['location'];
+        }
+
+        if (array_key_exists('call_type', $data)) {
+            $updateData['call_type'] = trim($data['call_type'] ?? '');
+            $auditData['call_type'] = $data['call_type'];
+        }
+
+        if (!empty($updateData)) {
+            Callout::update((int)$calloutId, $updateData);
+            audit_log($brigade['id'], (int)$calloutId, 'callout_updated', $auditData);
 
             // Push to Portal webhook
             $this->pushToPortal((int)$calloutId, 'callout.updated');
         }
 
-        json_response(['success' => true]);
+        // Return updated callout data
+        $updatedCallout = Callout::findById((int)$calloutId);
+        json_response([
+            'success' => true,
+            'callout' => $updatedCallout,
+        ]);
     }
 
     public function cancelCallout(string $slug, string $calloutId): void
