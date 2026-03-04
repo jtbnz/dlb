@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="64" fill="#dc2626"/>
+  <rect width="512" height="512" rx="64" fill="#1a1a1a"/>
   <g fill="white">
     <!-- Fire/flame icon representing fire brigade -->
     <path d="M256 64c-16 32-48 64-48 112 0 48 32 80 48 80s48-32 48-80c0-48-32-80-48-112z"/>

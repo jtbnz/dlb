@@ -9,7 +9,7 @@
  */
 
 $sizes = [192, 512];
-$bgColor = [220, 38, 38]; // #dc2626
+$bgColor = [26, 26, 26]; // #1a1a1a
 
 foreach ($sizes as $size) {
     // Create image
