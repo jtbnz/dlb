@@ -2,7 +2,21 @@
 
 declare(strict_types=1);
 
+// Secure session configuration
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_secure', '1'); // Requires HTTPS
+ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.use_strict_mode', '1');
+
 session_start();
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self';");
 
 // Autoload
 spl_autoload_register(function ($class) {

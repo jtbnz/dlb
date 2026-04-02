@@ -74,6 +74,25 @@ function verify_csrf(string $token): bool
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+function require_csrf(): void
+{
+    $token = null;
+    
+    // Check for CSRF token in various locations
+    if (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
+        $token = $_SERVER['HTTP_X_CSRF_TOKEN'];
+    } elseif (isset($_POST['csrf_token'])) {
+        $token = $_POST['csrf_token'];
+    } else {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $token = $input['csrf_token'] ?? null;
+    }
+    
+    if (!$token || !verify_csrf($token)) {
+        json_response(['error' => 'Invalid CSRF token'], 403);
+    }
+}
+
 function sanitize(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
